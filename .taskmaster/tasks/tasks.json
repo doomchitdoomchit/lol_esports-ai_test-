@@ -88,15 +88,15 @@
         "dependencies": [
           12
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
             "title": "Create EDA Page File and Implement Data Filtering",
             "description": "Create the new Streamlit page file for Exploratory Data Analysis. This initial setup will include the page title and the core logic to filter the main DataFrame based on global filter values stored in `st.session_state`.",
             "dependencies": [],
-            "details": "Create a new file at `pages/1_EDA.py`. Add the header `st.header('Exploratory Data Analysis')`. Access the main DataFrame and filter values from `st.session_state` to generate a `filtered_df` for use by all components on this page.",
-            "status": "pending",
+            "details": "Create a new file at `pages/1_EDA.py`. Add the header `st.header('Exploratory Data Analysis')`. Access the main DataFrame and filter values from `st.session_state` to generate a `filtered_df` for use by all components on this page.\n<info added on 2025-11-20T13:37:46.179Z>\n{}\n</info added on 2025-11-20T13:37:46.179Z>\n<info added on 2025-11-20T13:38:48.849Z>\n```json\n\"In `pages/1_EDA.py`, use the `filtered_players_df` to calculate and display summary statistics. Create a three-column layout using `st.columns(3)`. Add a `st.metric` to each column to display the following: 'Total Games' (the number of rows in the filtered DataFrame), 'Unique Champions' (the count of unique champions from the 'champion' column), and 'Overall Win Rate' (the mean of the 'result' column, formatted as a percentage).\"\n```\n</info added on 2025-11-20T13:38:48.849Z>",
+            "status": "done",
             "testStrategy": "Run the Streamlit app and verify that a new page for 'EDA' appears in the navigation. Apply filters in the sidebar and insert a temporary `st.write(filtered_df.shape)` to confirm the data is being sliced correctly."
           },
           {
@@ -106,8 +106,8 @@
             "dependencies": [
               1
             ],
-            "details": "Use `st.columns` to create a multi-column layout. In these columns, use `st.metric` to display 'Total Games' by calculating `len(filtered_df)` and 'Unique Players' by using `filtered_df['playerid'].nunique()`.",
-            "status": "pending",
+            "details": "Use `st.columns` to create a multi-column layout. In these columns, use `st.metric` to display 'Total Games' by calculating `len(filtered_df)` and 'Unique Players' by using `filtered_df['playerid'].nunique()`.\n<info added on 2025-11-20T13:39:29.324Z>\nCreate a three-column layout using `st.columns(3)` immediately under the page caption in `pages/1_EDA.py`. The metrics will reuse the `filtered_players_df` from the previous filtering step.\n\n1.  **Total Games:** Display `len(filtered_players_df)`. Format the number with a thousands separator using an f-string (e.g., `{value:,}`).\n2.  **Unique Players:** Before calculating, check if the 'playerid' column exists. If not, display 0 and a `st.warning`. If it exists, display `filtered_players_df['playerid'].nunique()`, formatted with a thousands separator.\n3.  **Overall Win Rate:** Before calculating, check if the 'result' column exists. If not, display 0% and a `st.warning`. If it exists, calculate the win rate. Gracefully handle cases where the dataframe length is zero to avoid division by zero errors. Format the result as a percentage (e.g., `f\"{win_rate:.1%}\"`).\n</info added on 2025-11-20T13:39:29.324Z>\n<info added on 2025-11-20T13:40:40.668Z>\n```json\n\"Summary metric cards for total games, unique players, and overall win rate have been implemented in `pages/1_EDA.py` using `st.columns(3)`. The metrics are rendered directly beneath the page caption and reuse the pre-filtered dataframe. The implementation includes formatting for thousands separators and percentages, and displays warnings if the required `playerid` or `result` columns are missing.\"\n```\n</info added on 2025-11-20T13:40:40.668Z>",
+            "status": "done",
             "testStrategy": "Navigate to the EDA page. Confirm that the metric cards for 'Total Games' and 'Unique Players' are displayed. Change the sidebar filters and verify that the numbers on the cards update correctly."
           },
           {
@@ -117,8 +117,8 @@
             "dependencies": [
               1
             ],
-            "details": "Calculate win/loss counts from the `filtered_df['result']` column using `value_counts()`. Generate a pie chart with `plotly.express.pie` and display it with `st.plotly_chart`. Below the chart, add a subheader and show `filtered_df.head()` using `st.dataframe`.",
-            "status": "pending",
+            "details": "Calculate win/loss counts from the `filtered_df['result']` column using `value_counts()`. Generate a pie chart with `plotly.express.pie` and display it with `st.plotly_chart`. Below the chart, add a subheader and show `filtered_df.head()` using `st.dataframe`.\n<info added on 2025-11-20T13:41:41.227Z>\n```json\n\"In `pages/1_EDA.py`, create a Plotly pie chart using `plotly.express` to show the win/loss distribution from the `filtered_players_df['result']` column. Map the numeric results (e.g., 0 and 1) to human-friendly labels like 'Loss' and 'Win' before plotting. If the filtered dataframe is empty, display a placeholder message using `st.info` instead of rendering the chart. Below the chart, add a subheader titled 'Data Preview' and display the first 20 rows of the filtered data using `st.dataframe(filtered_players_df.head(20), use_container_width=True)`. If the dataframe is empty, use `st.empty` to show a message. Place the chart and the data preview within a container or columns to maintain a responsive layout. As an optional feature, consider adding a download button for the filtered data as a CSV; otherwise, leave a TODO comment.\"\n```\n</info added on 2025-11-20T13:41:41.227Z>\n<info added on 2025-11-20T13:43:24.609Z>\nIn `pages/1_EDA.py`, a `_win_loss_chart` helper function has been implemented to render a donut pie chart using Plotly Express. This function maps numeric results to 'Win'/'Loss' labels, uses custom colors, and handles empty data scenarios. A corresponding `_data_preview` section has also been added, displaying up to 20 rows with a row count caption and a message for when no data is available. A TODO comment for a future download button has been included. These new sections are positioned below the summary metrics, completing the page's layout for data visualization and inspection.\n</info added on 2025-11-20T13:43:24.609Z>",
+            "status": "done",
             "testStrategy": "Check the EDA page to ensure both the pie chart and the data table are rendered. Verify the pie chart's segments correspond to the win/loss counts. Change filters and confirm that both the chart and the table's content update accordingly."
           }
         ]
@@ -496,7 +496,7 @@
     ],
     "metadata": {
       "created": "2025-11-14T13:00:08.744Z",
-      "updated": "2025-11-20T13:09:41.061Z",
+      "updated": "2025-11-20T13:43:36.603Z",
       "description": "Tasks for master context"
     }
   }
