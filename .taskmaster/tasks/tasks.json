@@ -54,15 +54,15 @@
         "dependencies": [
           11
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
             "title": "Create `app.py` and Implement Data Loading",
             "description": "Set up the main application file `app.py`. Import necessary libraries like Streamlit and the custom `data_loader` module. Call the `load_data` function to load the player and team DataFrames.",
             "dependencies": [],
-            "details": "Create the `app.py` file. Import streamlit and the data_loader function. Call `load_data` to get the `df_players` and `df_teams` DataFrames.",
-            "status": "pending",
+            "details": "Create the `app.py` file. Import streamlit and the data_loader function. Call `load_data` to get the `df_players` and `df_teams` DataFrames.\n<info added on 2025-11-20T13:04:39.462Z>\n```json\n\"Create the top-level `app.py` file to serve as the Streamlit application's entry point, keeping it separate from `main.py`. In this script, import `streamlit as st` and the `load_data` function from the `data_loader` module. Call `load_data` once at the module level to fetch `df_players` and `df_teams`, leveraging Streamlit's caching. Wrap the primary application logic in a `main()` function to ensure clean execution with `streamlit run app.py`. Add a placeholder title to the page layout. For verification during development, include a commented-out line or a guarded block to display `df_players.head()`.\"\n```\n</info added on 2025-11-20T13:04:39.462Z>\n<info added on 2025-11-20T13:06:08.658Z>\n{\n  \"text\": \"A new `app.py` has been added as the Streamlit entry point, which imports `load_data`, sets the base page configuration, and renders a placeholder headline and caption. Data is loaded via the cached loader, with an optional sidebar checkbox to preview the head of the dataframes for verification. The app is confirmed to boot correctly via `streamlit run app.py`, and the player/team DataFrames are now available for the upcoming sidebar filters.\"\n}\n</info added on 2025-11-20T13:06:08.658Z>",
+            "status": "done",
             "testStrategy": "Run `streamlit run app.py` and verify the application starts without any data loading errors. Temporarily add `st.dataframe(df_players.head())` to visually confirm the data is loaded."
           },
           {
@@ -72,8 +72,8 @@
             "dependencies": [
               1
             ],
-            "details": "Use `st.sidebar.title('LCK Global Filters')`. Create four `st.sidebar.selectbox` widgets, using `df_players['ColumnName'].unique()` for options. Store the selected values in a dictionary assigned to `st.session_state['filters']`.",
-            "status": "pending",
+            "details": "Use `st.sidebar.title('LCK Global Filters')`. Create four `st.sidebar.selectbox` widgets, using `df_players['ColumnName'].unique()` for options. Store the selected values in a dictionary assigned to `st.session_state['filters']`.\n<info added on 2025-11-20T13:07:18.241Z>\nThe filter options for 'year', 'split', 'playoffs', and 'patch' should be derived from the unique, sorted values within the loaded dataframes. Each `st.sidebar.selectbox` must include an 'All' option at the beginning of its list to allow pages to opt out of filtering. Store the selections in `st.session_state['filters']` as a dictionary with lowercase keys (year, split, playoffs, patch). For robustness, use `st.warning` to handle cases where a filter column is missing or has no options. The `main()` function should be updated to return the `df_players`, `df_teams`, and the filters dictionary. Optionally, echo the selected filters for debugging.\n</info added on 2025-11-20T13:07:18.241Z>\n<info added on 2025-11-20T13:09:21.928Z>\n\"A `_render_sidebar_filters` helper function was implemented in `app.py` to build the selectbox widgets for Year, Split, Playoff, and Patch, populating them with unique values from `df_players` and prepending an \\\"All\\\" option. The sidebar now persists selections in `st.session_state['filters']` and includes an `st.expander` for debugging purposes, along with a `st.caption` to inform users of the global nature of the filters. The `main()` function was updated to return a dictionary containing `df_players`, `df_teams`, and the `filters`, which aligns future pages with the selected context while preserving the existing sample-data workflow.\"\n</info added on 2025-11-20T13:09:21.928Z>",
+            "status": "done",
             "testStrategy": "Run the app and check the sidebar. Verify that all four filter widgets are present and populated with correct options. Change the selection in each filter and use a temporary `st.write(st.session_state.get('filters'))` to confirm the state is updated correctly."
           }
         ]
@@ -496,7 +496,7 @@
     ],
     "metadata": {
       "created": "2025-11-14T13:00:08.744Z",
-      "updated": "2025-11-20T12:40:39.571Z",
+      "updated": "2025-11-20T13:09:41.061Z",
       "description": "Tasks for master context"
     }
   }
