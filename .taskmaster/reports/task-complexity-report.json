@@ -1,0 +1,93 @@
+{
+	"meta": {
+		"generatedAt": "2025-11-17T05:36:11.315Z",
+		"tasksAnalyzed": 10,
+		"totalTasks": 10,
+		"analysisCount": 10,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": false
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 11,
+			"taskTitle": "Setup Project and Implement Data Loader",
+			"complexityScore": 3,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down the Data Loader task into subtasks for: 1. Initializing the project structure and creating the `data_loader.py` file. 2. Implementing the core data loading and cleaning logic (reading CSV, handling nulls). 3. Adding the KDA calculation and splitting the DataFrame into player and team datasets.",
+			"reasoning": "Low complexity. This is a greenfield task involving standard Pandas operations that are well-described in the pseudo-code. No complex algorithms or UI is required. The primary effort is file setup and basic data manipulation."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Implement Global Sidebar Filters",
+			"complexityScore": 2,
+			"recommendedSubtasks": 2,
+			"expansionPrompt": "Decompose the Global Sidebar Filters task. Create subtasks for: 1. Setting up the main `app.py` file and importing the data loader. 2. Implementing the four sidebar filter widgets and storing their selected values in `st.session_state`.",
+			"reasoning": "Very low complexity. The task uses basic, well-documented Streamlit functionality for creating sidebar widgets. The logic for populating options is a simple DataFrame operation. This is mostly boilerplate code."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Implement EDA (Exploratory Data Analysis) Page",
+			"complexityScore": 4,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down the EDA Page implementation into subtasks for: 1. Creating the page file and filtering the DataFrame based on session state. 2. Implementing the summary metric cards using `st.metric`. 3. Generating and displaying the Win/Loss distribution pie chart and the data preview.",
+			"reasoning": "Low-to-medium complexity. The task combines straightforward data filtering, basic aggregation, and standard Streamlit/Plotly components. All operations are high-level and well-documented, requiring no complex state management."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "Develop Reusable Radar Chart Module",
+			"complexityScore": 4,
+			"recommendedSubtasks": 2,
+			"expansionPrompt": "Decompose the Radar Chart Module task. Create subtasks for: 1. Implementing the core `create_radar_chart` function that generates a single-trace radar chart using Plotly graph objects. 2. Adding layout customizations and writing a unit test to verify its output.",
+			"reasoning": "Low-to-medium complexity. The task is to create a self-contained, pure function. While it uses the slightly more verbose `plotly.graph_objects`, the requirements are for a simple chart. The complexity lies in creating a clean, reusable API rather than the plotting logic itself."
+		},
+		{
+			"taskId": 15,
+			"taskTitle": "Implement Champion Stats Page",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the Champion Stats Page task. Create subtasks for: 1. Setting up the page and data filtering. 2. Implementing the data aggregation logic to calculate pick rate, win rate, and ban rate. 3. Creating the Pick vs. Win Rate scatter plot. 4. Creating the Top 10 Banned Champions bar chart and arranging the layout.",
+			"reasoning": "Medium complexity. The primary challenge is the data aggregation. Calculating metrics like pick rate and ban rate requires careful definition and a more complex pandas `groupby` operation than other tasks. The visualization part is standard, but the data preparation is non-trivial."
+		},
+		{
+			"taskId": 16,
+			"taskTitle": "Implement Player & Team Profile Pages",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down this task into subtasks for two separate pages: 1. Implement the Player Profile page with a player selector and data filtering. 2. Integrate the radar chart and a KDA trend line chart on the Player page. 3. Implement the Team Profile page with a team selector. 4. Integrate required charts for the Team page.",
+			"reasoning": "Medium complexity. Involves creating two separate but similar pages. The task requires integrating multiple components: dynamic UI widgets, data filtering, and the custom radar chart module. Managing the state and connections for each page adds moderate effort."
+		},
+		{
+			"taskId": 17,
+			"taskTitle": "Implement Player vs. Player Comparison",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the Player Comparison task: 1. Set up the two-column layout and the 'Player A' selector. 2. Implement the dependent filtering logic for the 'Player B' selector based on position. 3. Develop the data logic to fetch and format stats for both players. 4. Create the overlaid radar chart. 5. Create a diverging bar chart for stat comparison.",
+			"reasoning": "High complexity. The core technical challenge is the stateful, dependent UI logic where one selection filters the options for another. This is significantly more complex than previous tasks. Additionally, creating comparative visualizations like overlaid radar charts requires more advanced data preparation and Plotly usage."
+		},
+		{
+			"taskId": 18,
+			"taskTitle": "Implement Team vs. Team Comparison",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down the Team Comparison task: 1. Implement the UI with two independent selectboxes for Team A and Team B. 2. Develop the logic to fetch and aggregate stats for both selected teams. 3. Generate and display the comparative charts (e.g., overlaid radar or side-by-side bar charts).",
+			"reasoning": "Medium complexity. This is substantially simpler than the player comparison as it lacks the dependent filtering logic. The effort is comparable to the profile pages, involving UI setup, data fetching for two entities, and creating comparison visualizations."
+		},
+		{
+			"taskId": 19,
+			"taskTitle": "Optimize Layout for Zero-Scroll Policy",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "This is a refactoring task. Create a subtask for each page (EDA, Champion, Player/Team Profiles, Comparisons) to refactor its layout using `st.columns` and `st.container` to eliminate vertical scrolling and ensure responsive chart sizing.",
+			"reasoning": "Medium-high complexity. This is a cross-cutting refactoring task that touches every UI file. Achieving a good-looking, responsive, zero-scroll layout is a non-trivial design and implementation challenge. The effort scales with the number of pages and risks introducing visual regressions."
+		},
+		{
+			"taskId": 20,
+			"taskTitle": "Finalize UI Polish and Theming",
+			"complexityScore": 6,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Decompose the UI Polish task. Create subtasks for: 1. Defining a centralized color theme/palette in a config file or module. 2. Refactoring all chart-generating functions to consistently use the defined theme. 3. Reviewing and applying minor CSS adjustments for spacing and font hierarchy.",
+			"reasoning": "Medium complexity. Like the layout optimization, this is a cross-cutting refactoring task. Applying a theme systematically requires modifying code in multiple files. The effort depends on how centralized the chart creation logic is. If not centralized, it will require a larger refactoring effort to avoid code duplication."
+		}
+	]
+}

@@ -1,0 +1,503 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 11,
+        "title": "Setup Project and Implement Data Loader",
+        "description": "Initialize the project structure and create a data loading and preprocessing module. This module will read the `./data/lck.csv` file into a Pandas DataFrame, handle missing values, and perform initial cleaning. It should also calculate derived metrics like KDA.",
+        "details": "Create a Python file, e.g., `data_loader.py`. Implement a function `load_data(file_path)` decorated with `@st.cache_data` to ensure performance. \n\nPseudo-code:\n```python\nimport pandas as pd\nimport streamlit as st\n\n@st.cache_data\ndef load_data(file_path):\n    df = pd.read_csv(file_path)\n    # Handle missing data\n    df.dropna(subset=['position', 'playerid'], inplace=True)\n    \n    # Calculate KDA, handling Deaths = 0 case\n    df['Deaths'] = df['Deaths'].replace(0, 1)\n    df['KDA'] = (df['Kills'] + df['Assists']) / df['Deaths']\n    \n    # Split data as per PRD\n    df_players = df[df['playerid'].notna()].copy()\n    df_teams = df[df['team.name'].notna() & df['playerid'].isna()].copy() # Assuming team rows have no playerid\n    \n    return df_players, df_teams\n```\nThis function will be the single source of truth for all data in the application.",
+        "testStrategy": "Verify that the `load_data` function returns two non-empty Pandas DataFrames (`df_players`, `df_teams`). Check the columns of the returned DataFrames to ensure the 'KDA' column is present and calculated correctly. Assert that rows with null `position` or `playerid` are removed from `df_players`.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize Project Structure and Create Data Loader File",
+            "description": "Set up the necessary directory structure for the project, including a 'data' folder, and create the initial `data_loader.py` Python script.",
+            "dependencies": [],
+            "details": "Create a root project folder. Inside it, create a `data` subdirectory and a Python file named `data_loader.py`. Ensure the `lck.csv` file is accessible from a relative path like `./data/lck.csv`.\n<info added on 2025-11-20T12:29:51.323Z>\n```json\n\"Create the `data_loader.py` module in the project's root directory. Populate it with the following initial function stub, incorporating the `@st.cache_data` decorator for performance. This function will later be used by Streamlit pages to access the dataset.\\n\\nimport pandas as pd\\nimport streamlit as st\\n\\n@st.cache_data\\ndef load_data(file_path: str) -> pd.DataFrame:\\n    \\\"\\\"\\\"\\n    Loads data from the specified CSV file, performs initial cleaning,\\n    and calculates derived metrics like KDA.\\n    \\\"\\\"\\\"\\n    # Implementation for reading the CSV from './data/lck.csv' and cleaning it will be added here.\\n    pass\\n\\nEnsure the new file is tracked by git and that the `data/` directory remains the canonical location for the CSV file.\"\n```\n</info added on 2025-11-20T12:29:51.323Z>\n<info added on 2025-11-20T12:30:50.980Z>\n```json\n\"The `data/` directory containing `lck.csv` has been confirmed to exist at the project root. The `data_loader.py` module has been created with a cached `load_data` function stub that raises a `NotImplementedError`. This allows the module to be imported by downstream Streamlit pages while the core data loading logic is pending implementation.\"\n```\n</info added on 2025-11-20T12:30:50.980Z>",
+            "status": "done",
+            "testStrategy": "Verify that the `data_loader.py` file and the `data/` directory are correctly created in the project's root directory."
+          },
+          {
+            "id": 2,
+            "title": "Implement Core Data Loading and Cleaning Logic",
+            "description": "Implement the `load_data` function within `data_loader.py`. This function will read the CSV file into a Pandas DataFrame and handle missing values by dropping rows where 'position' or 'playerid' are null.",
+            "dependencies": [
+              1
+            ],
+            "details": "Define the function `load_data(file_path)` decorated with `@st.cache_data`. Use `pd.read_csv(file_path)` to load the data. Implement the cleaning step using `df.dropna(subset=['position', 'playerid'], inplace=True)`.\n<info added on 2025-11-20T12:33:51.968Z>\nAdd `pandas` and `streamlit` as dependencies in `pyproject.toml`. The `load_data` function in `data_loader.py` should be implemented to read `./data/lck.csv` using `pd.read_csv`, configured with `na_values` and `keep_default_na=True`. After loading, drop the unnamed index column. Normalize column names to lowercase to handle both `Kills` and `kills` style naming. Filter out rows with a missing `playername`. The function should then split the data and return a tuple `(df_players, df_teams)`, where `df_players` excludes rows with `position == 'team'` and `df_teams` contains only those rows.\n</info added on 2025-11-20T12:33:51.968Z>\n<info added on 2025-11-20T12:35:50.325Z>\nAdded `pandas>=2.2.0` and `streamlit>=1.36.0` to `pyproject.toml`. The first iteration of `load_data` in `data_loader.py` is implemented; it reads from `data/lck.csv`, strips unnamed columns, and drops rows missing `position` or player identifier fields, while preserving team rows. The function returns a single cleaned DataFrame with normalized positions, ready for metric calculations in the next subtask.\n</info added on 2025-11-20T12:35:50.325Z>",
+            "status": "done",
+            "testStrategy": "Write a unit test to call `load_data` and assert that the returned DataFrame does not contain any rows with null values in the 'position' or 'playerid' columns."
+          },
+          {
+            "id": 3,
+            "title": "Calculate KDA Metric and Split DataFrame",
+            "description": "Enhance the `load_data` function to calculate the Kill-Death-Assist (KDA) ratio. Afterwards, split the cleaned DataFrame into two separate DataFrames, one for players and one for teams, and return them.",
+            "dependencies": [
+              2
+            ],
+            "details": "Inside `load_data`, add logic to handle cases where 'Deaths' is 0 by replacing it with 1. Calculate the 'KDA' column using the formula `(df['Kills'] + df['Assists']) / df['Deaths']`. Split the data into `df_players` and `df_teams` as per the pseudo-code and return `df_players, df_teams`.\n<info added on 2025-11-20T12:37:14.128Z>\n```json\n\"Extend the KDA calculation to handle lowercase column names (kills, deaths, assists) and guard against both zero and NaN values in the 'deaths' column by replacing them with 1 before division. The function should split the DataFrame into `df_players` (where 'position' is not 'team') and `df_teams` (where 'position' is 'team'). Ensure the new 'KDA' column is present on the `df_players` DataFrame. The `load_data` function signature, return type hints, and docstring must be updated to reflect the tuple output, and the return must remain compatible with Streamlit caching. Add validation to raise a ValueError with a clear error message if either resulting DataFrame is empty or if the source 'kills'/'assists' columns are missing.\"\n```\n</info added on 2025-11-20T12:37:14.128Z>\n<info added on 2025-11-20T12:40:22.958Z>\nThe `load_data` function has been updated to return a `(df_players, df_teams)` tuple, with corresponding updates to the docstring and type hints. A `_safe_numeric` helper function was implemented for a robust KDA calculation that handles lowercase column names and guards against NaN/zero deaths. The data split logic now uses the normalized `position` column (where `position == 'team'`) and raises a `ValueError` for empty dataframes. A smoke test confirmed the final shapes for `df_players` and `df_teams` are (4060, 161) and (812, 160) respectively, with reasonable KDA values.\n</info added on 2025-11-20T12:40:22.958Z>",
+            "status": "done",
+            "testStrategy": "Check that the `load_data` function returns a tuple of two DataFrames. Verify that the 'KDA' column exists and is correctly calculated in the players DataFrame. Confirm the player and team DataFrames are split correctly based on the 'playerid' column's null status."
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Implement Global Sidebar Filters",
+        "description": "Create the main application layout in a file like `app.py`. Implement the Streamlit sidebar with filter controls for 'Year', 'Split', 'Playoff', and 'Patch'. These controls will be used to filter the global dataset.",
+        "details": "In `app.py`, use `st.sidebar` to add widgets. The options for these widgets should be dynamically populated from the loaded DataFrame to ensure they are always valid.\n\nPseudo-code:\n```python\nimport streamlit as st\nfrom data_loader import load_data\n\ndf_players, df_teams = load_data('./data/lck.csv')\n\nst.sidebar.title('LCK Global Filters')\n\nyear = st.sidebar.selectbox('Year', options=df_players['Year'].unique())\nsplit = st.sidebar.selectbox('Split', options=df_players['Split'].unique())\n# ... other filters for Playoff and Patch\n\n# Store filters for other modules to use\nst.session_state['filters'] = {'year': year, 'split': split, ...}\n```\nThese selections will form the basis for filtering data across all pages.",
+        "testStrategy": "Run the Streamlit app. Verify that a sidebar appears with the four specified filter widgets ('Year', 'Split', 'Playoff', 'Patch'). Check that the dropdown options for each filter are correctly populated from the unique values in the corresponding DataFrame columns. Changing a filter value should not crash the app.",
+        "priority": "high",
+        "dependencies": [
+          11
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create `app.py` and Implement Data Loading",
+            "description": "Set up the main application file `app.py`. Import necessary libraries like Streamlit and the custom `data_loader` module. Call the `load_data` function to load the player and team DataFrames.",
+            "dependencies": [],
+            "details": "Create the `app.py` file. Import streamlit and the data_loader function. Call `load_data` to get the `df_players` and `df_teams` DataFrames.",
+            "status": "pending",
+            "testStrategy": "Run `streamlit run app.py` and verify the application starts without any data loading errors. Temporarily add `st.dataframe(df_players.head())` to visually confirm the data is loaded."
+          },
+          {
+            "id": 2,
+            "title": "Implement Sidebar Filter Widgets and Store State",
+            "description": "Add a Streamlit sidebar to `app.py` with four `st.selectbox` widgets for 'Year', 'Split', 'Playoff', and 'Patch'. Populate the options dynamically from the loaded DataFrame and store the selected values in `st.session_state`.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use `st.sidebar.title('LCK Global Filters')`. Create four `st.sidebar.selectbox` widgets, using `df_players['ColumnName'].unique()` for options. Store the selected values in a dictionary assigned to `st.session_state['filters']`.",
+            "status": "pending",
+            "testStrategy": "Run the app and check the sidebar. Verify that all four filter widgets are present and populated with correct options. Change the selection in each filter and use a temporary `st.write(st.session_state.get('filters'))` to confirm the state is updated correctly."
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Implement EDA (Exploratory Data Analysis) Page",
+        "description": "Create the first analytics page for Exploratory Data Analysis. This page will display basic statistics about the filtered dataset, including data previews, summary cards, and a win/loss distribution chart.",
+        "details": "Create a new file, e.g., `pages/1_EDA.py`. Use the filter values from `st.session_state` to slice the main DataFrame. Display information using `st.metric` for summary cards, `st.dataframe` for the preview, and `plotly.express.pie` for the win rate chart.\n\nPseudo-code:\n```python\nimport streamlit as st\nimport plotly.express as px\n\n# Filter df based on st.session_state.filters\nfiltered_df = df_players[...]\n\nst.header('Exploratory Data Analysis')\n\ncol1, col2, col3 = st.columns(3)\ncol1.metric('Total Games', len(filtered_df))\ncol2.metric('Unique Players', filtered_df['playerid'].nunique())\n\nwin_counts = filtered_df['result'].value_counts()\nfig = px.pie(values=win_counts.values, names=win_counts.index, title='Win/Loss Distribution')\nst.plotly_chart(fig, use_container_width=True)\n\nst.subheader('Data Preview')\nst.dataframe(filtered_df.head())\n```",
+        "testStrategy": "Navigate to the EDA page. Change the sidebar filters and verify that the 'Total Games' metric, pie chart, and data preview table update accordingly. Check that the numbers displayed in the summary cards are correct for the selected filter context.",
+        "priority": "medium",
+        "dependencies": [
+          12
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create EDA Page File and Implement Data Filtering",
+            "description": "Create the new Streamlit page file for Exploratory Data Analysis. This initial setup will include the page title and the core logic to filter the main DataFrame based on global filter values stored in `st.session_state`.",
+            "dependencies": [],
+            "details": "Create a new file at `pages/1_EDA.py`. Add the header `st.header('Exploratory Data Analysis')`. Access the main DataFrame and filter values from `st.session_state` to generate a `filtered_df` for use by all components on this page.",
+            "status": "pending",
+            "testStrategy": "Run the Streamlit app and verify that a new page for 'EDA' appears in the navigation. Apply filters in the sidebar and insert a temporary `st.write(filtered_df.shape)` to confirm the data is being sliced correctly."
+          },
+          {
+            "id": 2,
+            "title": "Implement Summary Metric Cards",
+            "description": "Display high-level summary statistics of the filtered dataset using Streamlit's metric cards. This will provide users with a quick overview of the data, including total games and unique players.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use `st.columns` to create a multi-column layout. In these columns, use `st.metric` to display 'Total Games' by calculating `len(filtered_df)` and 'Unique Players' by using `filtered_df['playerid'].nunique()`.",
+            "status": "pending",
+            "testStrategy": "Navigate to the EDA page. Confirm that the metric cards for 'Total Games' and 'Unique Players' are displayed. Change the sidebar filters and verify that the numbers on the cards update correctly."
+          },
+          {
+            "id": 3,
+            "title": "Add Win/Loss Pie Chart and Data Preview Table",
+            "description": "Visualize the win/loss distribution of the filtered games using a pie chart and provide a raw data preview. This will help users understand the composition of the dataset and inspect the filtered results directly.",
+            "dependencies": [
+              1
+            ],
+            "details": "Calculate win/loss counts from the `filtered_df['result']` column using `value_counts()`. Generate a pie chart with `plotly.express.pie` and display it with `st.plotly_chart`. Below the chart, add a subheader and show `filtered_df.head()` using `st.dataframe`.",
+            "status": "pending",
+            "testStrategy": "Check the EDA page to ensure both the pie chart and the data table are rendered. Verify the pie chart's segments correspond to the win/loss counts. Change filters and confirm that both the chart and the table's content update accordingly."
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Develop Reusable Radar Chart Module",
+        "description": "Create a modular and reusable function for generating radar charts using Plotly. This function will be used in the Player/Team Profile and Comparison pages to visualize multi-dimensional stats.",
+        "details": "Create a new file, `components/charts.py`. Implement a function `create_radar_chart(data, title)` that accepts a dictionary or DataFrame slice of stats and returns a Plotly Figure object.\n\nPseudo-code:\n```python\nimport plotly.graph_objects as go\n\ndef create_radar_chart(stats_data: dict, title: str):\n    # stats_data = {'KDA': 5, 'DPM': 650, 'GPM': 420, 'VSPM': 1.5}\n    categories = list(stats_data.keys())\n    values = list(stats_data.values())\n\n    fig = go.Figure()\n    fig.add_trace(go.Scatterpolar(\n        r=values,\n        theta=categories,\n        fill='toself'\n    ))\n\n    fig.update_layout(\n        polar=dict(radialaxis=dict(visible=True, range=[0, max(values) * 1.1])),\n        showlegend=False,\n        title=title\n    )\n    return fig\n```",
+        "testStrategy": "Unit test the `create_radar_chart` function. Pass it a dictionary of mock stats and verify it returns a `go.Figure` object. Manually inspect the generated chart to ensure the data points, labels, and title are rendered correctly.",
+        "priority": "medium",
+        "dependencies": [
+          11
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Core `create_radar_chart` Function",
+            "description": "Create the initial `create_radar_chart` function in `components/charts.py`. This function will accept a dictionary of statistics and a title, and generate a basic, single-trace radar chart using Plotly's `go.Scatterpolar`.",
+            "dependencies": [],
+            "details": "In a new file `components/charts.py`, define the function `create_radar_chart(stats_data: dict, title: str)`. It should extract categories and values from the input dictionary and use `go.Figure` and `go.Scatterpolar` to construct a basic chart. The function must return a `go.Figure` object.",
+            "status": "pending",
+            "testStrategy": "Manually call the function with sample data (e.g., `{'KDA': 5, 'DPM': 650}`) and verify it returns a `go.Figure` object without errors. A visual inspection of the rendered chart in a notebook is recommended to confirm basic functionality."
+          },
+          {
+            "id": 2,
+            "title": "Customize Radar Chart Layout and Add Unit Test",
+            "description": "Enhance the `create_radar_chart` function by adding layout customizations for better readability and aesthetics. Additionally, implement a unit test to formalize verification of the function's output.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use `fig.update_layout()` to customize the chart's appearance. Specifically, adjust the polar axis, set the title, and manage the legend visibility as per the pseudo-code. Create a `tests/test_charts.py` file and add a test case that calls `create_radar_chart` with mock data and asserts that the returned object is a `go.Figure` instance and contains the expected data trace.",
+            "status": "pending",
+            "testStrategy": "Run the unit test suite and confirm the new test passes. The test should check the type of the returned object and verify that the figure's data and layout properties (like title and categories) match the input mock data."
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Implement Champion Stats Page",
+        "description": "Develop the 'Champion Stats' page to visualize champion-specific data. This includes a scatter plot for Pick Rate vs. Win Rate and a bar chart for the Top 10 most banned champions based on the filtered data.",
+        "details": "Create `pages/2_Champion_Stats.py`. First, group the filtered DataFrame by champion. Calculate pick rate, ban rate, and win rate for each champion. Use `plotly.express.scatter` for the pick/win rate plot and `plotly.express.bar` for the ban rate plot. Use `st.columns` to arrange the charts side-by-side.\n\nPseudo-code:\n```python\n# In pages/2_Champion_Stats.py\n# ... filter data ...\n\nchamp_stats = filtered_df.groupby('champion').agg(\n    win_rate=('result', lambda x: (x == 1).mean()),\n    pick_count=('champion', 'count'),\n    # ... calculate ban counts separately ...\n)\n# ... calculate pick_rate and ban_rate ...\n\ncol1, col2 = st.columns(2)\n\nscatter_fig = px.scatter(champ_stats, x='pick_rate', y='win_rate', hover_name=champ_stats.index)\ncol1.plotly_chart(scatter_fig, use_container_width=True)\n\nban_fig = px.bar(top_10_banned, x='ban_rate', y=top_10_banned.index, orientation='h')\ncol2.plotly_chart(ban_fig, use_container_width=True)\n```",
+        "testStrategy": "Navigate to the 'Champion Stats' page. Verify that two charts are displayed. Hover over points on the scatter plot to see champion names. Check that the bar chart shows exactly 10 champions and is sorted correctly. Apply filters from the sidebar and confirm both charts update.",
+        "priority": "medium",
+        "dependencies": [
+          12
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up Champion Stats Page and Apply Global Filters",
+            "description": "Create the new page file `pages/2_Champion_Stats.py` and implement the logic to apply the global filters from `st.session_state` to the main DataFrame.",
+            "dependencies": [],
+            "details": "Create the Python file for the new Streamlit page. Add a title and import necessary libraries. Retrieve filter values from `st.session_state.filters` and use them to slice the main player DataFrame.",
+            "status": "pending",
+            "testStrategy": "Navigate to the 'Champion Stats' page and verify it loads without errors. Check that the page title is displayed correctly. Add a `st.dataframe(filtered_df.head())` to temporarily confirm that the data is being filtered based on sidebar selections."
+          },
+          {
+            "id": 2,
+            "title": "Implement Champion Statistics Aggregation Logic",
+            "description": "Calculate champion-specific statistics including win rate, pick rate, and ban rate from the filtered DataFrame. This involves grouping data by champion.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use `pandas.groupby('champion')` on the filtered DataFrame. Use `.agg()` to calculate win rate and pick counts. Separately, determine the total number of games in the filtered set and the ban counts for each champion to calculate final pick and ban rates.",
+            "status": "pending",
+            "testStrategy": "Validate the calculated metrics for a known champion and a small, manually filtered dataset. Ensure that pick rate + ban rate does not exceed reasonable limits and that win rates are between 0 and 1."
+          },
+          {
+            "id": 3,
+            "title": "Create Pick Rate vs. Win Rate Scatter Plot",
+            "description": "Use the aggregated champion statistics to generate a scatter plot visualizing the relationship between champion pick rate and win rate.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use `plotly.express.scatter` to create the visualization. Pass the aggregated DataFrame, setting `x='pick_rate'`, `y='win_rate'`, and `hover_name` to the champion's name for interactivity.",
+            "status": "pending",
+            "testStrategy": "Render the scatter plot on the page. Hover over several data points to verify that the correct champion names and data appear in the tooltip. Check that the axes are correctly labeled as 'Pick Rate' and 'Win Rate'."
+          },
+          {
+            "id": 4,
+            "title": "Create Top 10 Banned Champions Chart and Finalize Layout",
+            "description": "Generate a horizontal bar chart for the top 10 most banned champions and arrange both the scatter plot and bar chart in a side-by-side layout.",
+            "dependencies": [
+              2
+            ],
+            "details": "First, sort the aggregated DataFrame by `ban_rate` in descending order and select the top 10. Use `plotly.express.bar` to create a horizontal bar chart. Then, use `st.columns(2)` to place the scatter plot in the first column and the new bar chart in the second column.",
+            "status": "pending",
+            "testStrategy": "Verify that the bar chart displays exactly 10 champions and is sorted with the highest ban rate at the top. Confirm that both charts appear side-by-side. Check that `use_container_width=True` is used to ensure charts fit the columns."
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Implement Player & Team Profile Pages",
+        "description": "Create dynamic profile pages for individual players and teams. The page should feature a dropdown to select a player/team and display their key performance indicators on a radar chart and a trend line chart for performance over time.",
+        "details": "Create `pages/3_Player_Profile.py` and `pages/4_Team_Profile.py`. Add a `st.selectbox` to choose a player/team from the filtered data. Once selected, filter the data for that entity. Extract key metrics (KDA, DPM, GPM, VSPM) and use the `create_radar_chart` function from Task 14. Use `plotly.express.line` to show a metric (e.g., KDA) over the 'Patch' or game date for the trend line.\n\nPseudo-code:\n```python\n# In pages/3_Player_Profile.py\n# ... filter data ...\n\nselected_player = st.selectbox('Select Player', options=filtered_df['playerid'].unique())\nplayer_data = filtered_df[filtered_df['playerid'] == selected_player]\n\n# Create radar chart\nplayer_avg_stats = player_data[['KDA', 'DPM', 'GPM', 'VSPM']].mean().to_dict()\nradar_fig = create_radar_chart(player_avg_stats, f'{selected_player} Performance')\nst.plotly_chart(radar_fig, use_container_width=True)\n\n# Create trend line\ntrend_fig = px.line(player_data, x='Patch', y='KDA', title='KDA Trend')\nst.plotly_chart(trend_fig, use_container_width=True)\n```",
+        "testStrategy": "On the Player Profile page, select a player. Verify that a radar chart and a line chart appear. Check that the stats on the radar chart correspond to the average stats of the selected player. Change the player selection and confirm the charts update with new data.",
+        "priority": "medium",
+        "dependencies": [
+          12,
+          14
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Player Profile Page with Player Selector",
+            "description": "Create the basic structure for the Player Profile page in `pages/3_Player_Profile.py`. This includes adding a title and implementing a Streamlit selectbox to allow users to choose a player from the filtered dataset, then filtering the data accordingly.",
+            "dependencies": [],
+            "details": "Create the file `pages/3_Player_Profile.py`. Use the globally filtered DataFrame from `st.session_state`. Add a `st.selectbox` populated with unique `playerid` values. When a player is selected, filter the main DataFrame to create a `player_data` subset for that player.",
+            "status": "pending",
+            "testStrategy": "Navigate to the Player Profile page. Verify the selectbox is populated with player IDs. Select a player and temporarily display the filtered `player_data` DataFrame using `st.dataframe` to confirm it contains only data for the selected player."
+          },
+          {
+            "id": 2,
+            "title": "Integrate Radar and Trend Charts on Player Profile Page",
+            "description": "Enhance the Player Profile page by adding two visualizations: a radar chart for key performance indicators (KDA, DPM, GPM, VSPM) and a line chart to show the KDA trend over time.",
+            "dependencies": [
+              1
+            ],
+            "details": "Using the filtered `player_data`, calculate the mean for 'KDA', 'DPM', 'GPM', and 'VSPM'. Pass these stats to the `create_radar_chart` function. Separately, use `plotly.express.line` to plot 'KDA' against 'Patch'. Display both charts using `st.plotly_chart`.",
+            "status": "pending",
+            "testStrategy": "On the Player Profile page, select a player. Verify that a radar chart and a KDA trend line chart are displayed. Change the player selection and confirm both charts update to reflect the new player's data."
+          },
+          {
+            "id": 3,
+            "title": "Implement Team Profile Page with Team Selector",
+            "description": "Create the `pages/4_Team_Profile.py` file for the Team Profile page. Implement a Streamlit selectbox to allow users to choose a team, and filter the data for the selected team.",
+            "dependencies": [],
+            "details": "Create the new page file `pages/4_Team_Profile.py`. Add a `st.selectbox` with options populated from the unique team names in the filtered dataset. When a team is selected, filter the data to create a `team_data` subset.",
+            "status": "pending",
+            "testStrategy": "Navigate to the Team Profile page. Check that the selectbox for teams is present and correctly populated. Select a team and use `st.dataframe` to verify that the data is filtered correctly for the selected team."
+          },
+          {
+            "id": 4,
+            "title": "Integrate Radar and Trend Charts on Team Profile Page",
+            "description": "Add the radar and trend line charts to the Team Profile page to visualize aggregate team statistics, similar to the player profile implementation.",
+            "dependencies": [
+              3
+            ],
+            "details": "Using the `team_data` subset, calculate the average team-wide stats for key metrics. Use the `create_radar_chart` function for visualization. Create a line chart with `plotly.express.line` to show a metric's trend over 'Patch'. Display both charts.",
+            "status": "pending",
+            "testStrategy": "Select a team on the Team Profile page. Verify that a radar chart and a line chart appear, displaying the team's aggregate stats. Change the selected team and confirm the charts update accordingly."
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "title": "Implement Player vs. Player Comparison",
+        "description": "Build the 'Player vs. Player' comparison page. This page must enforce the rule that only players from the same position can be compared. It will use overlaid radar charts and diverging bar charts for direct stat comparison.",
+        "details": "Create `pages/5_Player_Comparison.py`. Use `st.columns` for a two-column layout. The first column will have a `st.selectbox` for 'Player A'. Once Player A is selected, determine their primary position. Then, populate the 'Player B' selectbox in the second column *only* with players from that same position.\n\nPseudo-code:\n```python\ncol1, col2 = st.columns(2)\nplayer_a = col1.selectbox('Select Player A', options=filtered_df['playerid'].unique(), key='p_a')\n\nif player_a:\n    pos_a = filtered_df[filtered_df['playerid'] == player_a]['position'].iloc[0]\n    col1.write(f'Position: {pos_a}')\n    \n    eligible_players_b = filtered_df[filtered_df['position'] == pos_a]['playerid'].unique()\n    player_b = col2.selectbox('Select Player B', options=eligible_players_b, key='p_b')\n\n    # ... logic to fetch stats for player_a and player_b ...\n    # ... generate and display overlaid radar chart and diverging bar chart ...\n```",
+        "testStrategy": "Go to the 'Player vs. Player' page. Select a 'TOP' laner as Player A. Verify that the selectbox for Player B only contains other 'TOP' laners from the filtered dataset. Select Player B and confirm that comparison charts are rendered. Try selecting a 'MID' laner and ensure the Player B list updates correctly.",
+        "priority": "high",
+        "dependencies": [
+          16
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up Player Comparison Page Layout and Player A Selector",
+            "description": "Create the `pages/5_Player_Comparison.py` file and establish the basic two-column layout using `st.columns`. Implement the selectbox for 'Player A' in the first column.",
+            "dependencies": [],
+            "details": "Create the new page file. Use `st.columns(2)` to define `col1` and `col2`. In `col1`, add a `st.selectbox` for 'Player A' populated with unique player IDs from the filtered dataframe.",
+            "status": "pending",
+            "testStrategy": "Run the app and navigate to the 'Player Comparison' page. Verify that a two-column layout is present and the 'Player A' selectbox is visible and populated with player names."
+          },
+          {
+            "id": 2,
+            "title": "Implement Dependent Filtering for Player B Selector",
+            "description": "Based on the selection of 'Player A', determine their primary position. Then, create and populate the 'Player B' selectbox in the second column with only the players who share the same position.",
+            "dependencies": [
+              1
+            ],
+            "details": "Inside an `if player_a:` block, find the position of the selected player. Filter the dataframe to find all other players with the same position. Use this filtered list to populate the options for the 'Player B' `st.selectbox` in `col2`.",
+            "status": "pending",
+            "testStrategy": "Select a player in the 'Player A' dropdown (e.g., a 'JUNGLE' player). Check that the 'Player B' dropdown is then populated *only* with other 'JUNGLE' players from the dataset."
+          },
+          {
+            "id": 3,
+            "title": "Fetch and Prepare Comparison Statistics for Selected Players",
+            "description": "Once both 'Player A' and 'Player B' are selected, retrieve their relevant statistics from the dataframe. Format this data into a structure suitable for generating comparative visualizations.",
+            "dependencies": [
+              2
+            ],
+            "details": "After 'Player B' is selected, filter the main dataframe to get the rows for `player_a` and `player_b`. Aggregate or select the key performance indicators (e.g., KDA, GPM, DPM) for each player to be used in the charts.",
+            "status": "pending",
+            "testStrategy": "Use `st.write` or `st.dataframe` to temporarily display the fetched stats for Player A and Player B. Verify that the correct data is retrieved for the selected players."
+          },
+          {
+            "id": 4,
+            "title": "Create Overlaid Radar Chart for Player Stat Comparison",
+            "description": "Using the prepared player statistics, generate an overlaid radar chart to visually compare the performance profiles of the two selected players across multiple metrics.",
+            "dependencies": [
+              3
+            ],
+            "details": "Use Plotly's `graph_objects.Scatterpolar` to create two traces, one for each player. Add both traces to the same figure to create the overlay effect. The data for each trace will come from the prepared stats in the previous step.",
+            "status": "pending",
+            "testStrategy": "Select two players. Verify that a radar chart is rendered below the selectors. Check that there are two overlapping polygons, one for each player, and that the axes correspond to the chosen comparison metrics."
+          },
+          {
+            "id": 5,
+            "title": "Create Diverging Bar Chart for Direct Stat Comparison",
+            "description": "Implement a diverging bar chart to show the difference between Player A and Player B for key statistics. This provides a clear view of which player is superior in specific areas.",
+            "dependencies": [
+              3
+            ],
+            "details": "For each stat to compare, calculate the difference (`stat_A - stat_B`). Create a bar chart where positive bars indicate Player A is better and negative bars indicate Player B is better. Use Plotly's `graph_objects.Bar` and style the colors based on the sign of the value.",
+            "status": "pending",
+            "testStrategy": "Select two players. Verify a diverging bar chart is displayed. Check that the bars correctly represent the magnitude and direction of the statistical difference between the two players. For example, if Player A has a higher KDA, the KDA bar should be on Player A's side."
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "Implement Team vs. Team Comparison",
+        "description": "Build the 'Team vs. Team' comparison page, similar to the player comparison but for teams. This page will allow users to select two teams and compare their aggregate statistics.",
+        "details": "Create `pages/6_Team_Comparison.py`. This will be simpler than the player comparison. Use `st.columns` to create two selectboxes for 'Team A' and 'Team B'. The options should be populated from `df_teams`. Once two teams are selected, calculate their average stats from the filtered team data and display the comparison using overlaid radar charts and/or bar charts.",
+        "testStrategy": "Navigate to the 'Team vs. Team' page. Select two different teams. Verify that comparison charts are displayed showing the aggregate performance metrics for both teams. Change the sidebar filters and ensure the team stats and available team list update correctly.",
+        "priority": "medium",
+        "dependencies": [
+          16
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Team Selection UI",
+            "description": "Create the user interface for the 'Team vs. Team' comparison page, featuring two independent selectboxes for users to choose 'Team A' and 'Team B'.",
+            "dependencies": [],
+            "details": "Create the file `pages/6_Team_Comparison.py`. Use `st.columns(2)` to set up a two-column layout. Place a `st.selectbox` for 'Team A' in the first column and another for 'Team B' in the second. Populate both selectboxes with team names from the `df_teams` DataFrame.",
+            "status": "pending",
+            "testStrategy": "Navigate to the 'Team Comparison' page. Verify that two selectbox widgets are displayed side-by-side. Confirm the options in both dropdowns are populated with the correct list of teams. Check that selecting a team in one box does not affect the selection or options in the other."
+          },
+          {
+            "id": 2,
+            "title": "Develop Team Statistics Aggregation Logic",
+            "description": "Implement the logic to fetch data for the two selected teams and calculate their aggregate performance statistics based on the globally filtered data.",
+            "dependencies": [
+              1
+            ],
+            "details": "Once two teams are selected from the UI, filter the global player dataframe to get all match data for each team. For each team's dataset, group the data and calculate the mean of key statistical columns (e.g., kills, deaths, assists, gold earned) to produce two aggregate data series.",
+            "status": "pending",
+            "testStrategy": "After selecting two teams, use `st.write` or a debugger to inspect the two resulting data structures containing the aggregated stats. Manually verify that the calculated averages for a few key stats are correct based on the source `df_players` data for the selected teams and active filters."
+          },
+          {
+            "id": 3,
+            "title": "Generate and Display Comparative Charts",
+            "description": "Use the aggregated statistics for the two selected teams to generate and display visualizations, such as an overlaid radar chart or bar charts, for easy comparison.",
+            "dependencies": [
+              2
+            ],
+            "details": "Using the aggregated data series from the previous subtask, create a `plotly.graph_objects.Figure` with two `go.Scatterpolar` traces for an overlaid radar chart. Add this figure to the Streamlit page. Also consider adding a series of horizontal bar charts to compare individual stats directly.",
+            "status": "pending",
+            "testStrategy": "Select two teams and verify that a comparison chart (e.g., radar chart) is rendered. Check that the chart correctly labels both teams in its legend. Hover over the chart data points to confirm that the tooltips display the correct statistical values that were calculated in the previous step."
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "title": "Optimize Layout for Zero-Scroll Policy",
+        "description": "Refactor all pages to adhere to the 'Zero-Scroll Policy'. This involves using `st.columns` and `st.container` to create a tight grid layout and ensuring all Plotly charts use `use_container_width=True` to prevent overflow.",
+        "details": "Review each page (`EDA.py`, `Champion_Stats.py`, etc.). Wrap sections in `st.container()` to group elements. Use `st.columns()` with explicit width ratios (e.g., `st.columns([2, 3])`) to organize charts and metrics horizontally. Ensure every `st.plotly_chart` call includes `use_container_width=True`. For pages with excessive text, consider using `st.expander` to hide details by default.",
+        "testStrategy": "Visually inspect each page of the application on a standard monitor resolution (e.g., 1920x1080). Confirm that no vertical scrollbar appears on any page under normal filter conditions. Resize the browser window and verify that the layout and charts adjust responsively without breaking or overflowing.",
+        "priority": "low",
+        "dependencies": [
+          13,
+          15,
+          16,
+          17,
+          18
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Refactor EDA Page for Zero-Scroll Layout",
+            "description": "Reorganize the Exploratory Data Analysis (EDA) page using `st.columns` and `st.container` to fit all content, including charts and metrics, without requiring vertical scrolling.",
+            "dependencies": [],
+            "details": "Review `EDA.py`. Group related elements into `st.container()` sections. Use `st.columns()` to arrange charts and summary statistics horizontally. Ensure all `st.plotly_chart` calls include `use_container_width=True` to prevent overflow.",
+            "status": "pending",
+            "testStrategy": "Visually inspect the EDA page on a 1920x1080 screen to confirm no vertical scrollbar appears. Resize the browser window to verify the layout and charts adjust responsively without breaking."
+          },
+          {
+            "id": 2,
+            "title": "Refactor Champion Stats Page for Zero-Scroll Layout",
+            "description": "Restructure the Champion Stats page to eliminate vertical scrolling by implementing a compact, grid-based layout for champion metrics and performance charts.",
+            "dependencies": [],
+            "details": "In `Champion_Stats.py`, use `st.columns` to place champion-specific metrics, win rate charts, and pick/ban stats side-by-side. Wrap logical groups in `st.container` and set `use_container_width=True` for all charts.",
+            "status": "pending",
+            "testStrategy": "Verify the Champion Stats page displays correctly without a vertical scrollbar. Test with various champion selections to ensure the layout remains stable and responsive on smaller window sizes."
+          },
+          {
+            "id": 3,
+            "title": "Refactor Player and Team Profile Pages for Zero-Scroll Layout",
+            "description": "Update the Player and Team Profile pages to present all statistics and charts, including radar charts, in a compact, no-scroll format using `st.container` and `st.columns`.",
+            "dependencies": [],
+            "details": "Modify the profile page templates. Arrange key metrics, historical performance graphs, and radar charts into a columnar layout. Use `st.container` to encapsulate logical sections of the profile, such as 'Overall Performance' or 'Match History'.",
+            "status": "pending",
+            "testStrategy": "Load several different player and team profiles to confirm the zero-scroll policy is met. Ensure radar charts and other visualizations resize properly within their designated columns on a standard 1920x1080 resolution."
+          },
+          {
+            "id": 4,
+            "title": "Refactor Comparison Pages for Zero-Scroll Layout",
+            "description": "Redesign the player and team comparison pages to display side-by-side statistics and charts within the viewport, eliminating the need for vertical scrolling to compare entities.",
+            "dependencies": [],
+            "details": "Use `st.columns([1, 1])` to create a clear two-column, side-by-side comparison view. Place each entity's statistics and corresponding charts within their respective column. Ensure all Plotly charts use `use_container_width=True`.",
+            "status": "pending",
+            "testStrategy": "Perform a comparison between two players and then two teams. Verify the layout is compact and fits on a single screen without vertical scrolling. Check that the layout responsively adjusts when the browser window is resized."
+          },
+          {
+            "id": 5,
+            "title": "Implement Expanders for Text-Heavy Sections Across All Pages",
+            "description": "Scan all refactored pages and wrap long descriptive texts, raw data tables, or supplementary details in `st.expander` widgets to prevent them from breaking the zero-scroll layout.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "After the primary layout refactoring, review all pages (`EDA.py`, `Champion_Stats.py`, etc.) and identify any sections with excessive text or large tables. Wrap these sections in an `st.expander` with a clear title, collapsed by default.",
+            "status": "pending",
+            "testStrategy": "Navigate through all pages and confirm that sections with potentially long content are correctly hidden within expanders. Click to expand them and verify the content is displayed correctly without breaking the overall page structure."
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "title": "Finalize UI Polish and Theming",
+        "description": "Apply final UI touches, including a consistent color theme for Plotly charts and adjusting CSS if necessary to match the desired visual hierarchy. Ensure all titles and labels are clear and concise.",
+        "details": "Define a color scheme. This can be done by creating a dictionary of colors to be used across all Plotly charts for consistency. For example, `{'win': 'blue', 'loss': 'red'}`. Update all chart creation functions to use these colors. If needed, use `st.markdown('<style>...', unsafe_allow_html=True)` to inject minor CSS adjustments for spacing or font sizes to improve the visual hierarchy.",
+        "testStrategy": "Review the entire application for visual consistency. All charts should share a similar color palette and style. The visual flow should guide the user from high-level metrics to detailed charts. Text should be legible and labels should be unambiguous.",
+        "priority": "low",
+        "dependencies": [
+          19
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define and Centralize UI Color Theme for Charts",
+            "description": "Create a centralized configuration file or Python module to define the application-wide color palette for Plotly charts, ensuring consistency across all visualizations.",
+            "dependencies": [],
+            "details": "Create a new file, for example `config/colors.py`. In this file, define a dictionary named `CHART_COLORS` that maps semantic names to hex color codes (e.g., {'win': '#2ca02c', 'loss': '#d62728', 'primary_accent': '#1f77b4'}). This will be the single source of truth for all chart colors.",
+            "status": "pending",
+            "testStrategy": "Verify the creation of the color configuration file. Ensure it contains a well-defined dictionary of color codes and is importable by other modules without causing errors. Review the chosen colors for accessibility and visual appeal."
+          },
+          {
+            "id": 2,
+            "title": "Refactor Chart Functions to Use Centralized Color Theme",
+            "description": "Modify all existing chart creation functions, such as the win/loss pie chart and radar charts, to import and utilize the newly defined centralized color theme.",
+            "dependencies": [
+              1
+            ],
+            "details": "Iterate through all files that generate Plotly charts (e.g., `pages/1_EDA.py`, `components/charts.py`). Import the `CHART_COLORS` dictionary. Update the `plotly.express` or `plotly.graph_objects` calls to reference colors from this dictionary instead of using hardcoded strings.",
+            "status": "pending",
+            "testStrategy": "Visually inspect all charts in the application after refactoring. Confirm that they all render with the new, consistent color scheme. Perform a code review to ensure no hardcoded color values remain in the chart generation logic."
+          },
+          {
+            "id": 3,
+            "title": "Apply Minor CSS Adjustments for Visual Hierarchy",
+            "description": "Review the application's layout, spacing, and font styles. Apply minor CSS adjustments to improve the overall visual hierarchy, ensuring titles, labels, and other text elements are clear and well-organized.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use `st.markdown('<style>...</style>', unsafe_allow_html=True)` within the main app layout file to inject targeted CSS. Focus on adjusting margins, padding between charts and text, and font weights or sizes for `st.header`, `st.subheader`, and chart titles to create a clear visual flow.",
+            "status": "pending",
+            "testStrategy": "Conduct a full visual review of the application on a standard desktop screen. Check for consistent spacing between elements, legible text, and a logical visual flow. Verify that headers are distinct from sub-headers and that chart labels are unambiguous."
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-11-14T13:00:08.744Z",
+      "updated": "2025-11-20T12:40:39.571Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

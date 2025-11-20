@@ -1,0 +1,110 @@
+
+# Overview
+**LCK Analytics Dashboard**는 `./data/lck.csv` 데이터를 활용하여 LoL 챔피언스 코리아(LCK)의 선수 및 팀 데이터를 시각적으로 분석하는 웹 애플리케이션입니다.
+복잡한 테이블 형태의 원본 데이터를 **Streamlit**과 **Plotly**를 이용해 직관적인 인터랙티브 차트로 변환합니다. 이를 통해 LCK 팬들과 전력 분석관들이 특정 시즌, 패치, 선수의 퍼포먼스를 한눈에 비교하고 분석할 수 있도록 돕는 것을 목표로 합니다.
+
+# Core Features
+이 프로덕트는 사이드바 필터와 6개의 메인 분석 페이지로 구성됩니다.
+
+### 1. Global Data Filtering (Sidebar)
+* **What:** 연도(Year), 시즌(Split), 스테이지(Playoff여부), 패치 버전(Patch)을 선택하는 컨트롤러.
+* **Why:** 사용자가 원하는 특정 시점의 데이터만 추출하여 정밀한 분석을 하기 위함.
+* **How:** Streamlit Sidebar 위젯을 사용하며, 변경 시 모든 페이지의 그래프가 즉시 리렌더링됨.
+
+### 2. EDA (Exploratory Data Analysis)
+* **What:** 데이터셋의 기초 통계 및 변수 설명 제공.
+* **Why:** 데이터의 신뢰성을 확인하고 분석에 사용되는 지표(컬럼)의 의미를 사용자에게 전달.
+* **How:** 데이터 미리보기(`head()`), 전체 게임 수/선수 수 요약 카드, 승률 분포(Pie Chart) 표시.
+
+### 3. Champion Stats
+* **What:** 챔피언별 밴픽률, 승률, 주요 포지션 점유율 시각화.
+* **Why:** 당시의 메타(Meta) 챔피언과 함정 카드를 식별하기 위함.
+* **How:** Scatter Plot(X:픽률, Y:승률), Bar Chart(밴 Top 10) 사용.
+
+### 4. Player & Team Profiles
+* **What:** 특정 선수 또는 팀의 시즌 종합 퍼포먼스 대시보드.
+* **Why:** 개별 선수/팀의 강점과 약점(지표 육각형)을 파악하기 위함.
+* **How:** 선수/팀 선택 시 Radar Chart(전투/운영 지표), Trend Line(폼 변화) 출력.
+
+### 5. Comparison Modules (Player vs Player / Team vs Team)
+* **What:** 두 선수 또는 두 팀 간의 1:1 스탯 비교.
+* **Important Logic:** **Player vs Player는 반드시 '같은 포지션'의 선수끼리만 비교 가능하도록 필터링 제한.**
+* **How:** Overlay Radar Chart(겹쳐서 비교), 주요 지표 막대 그래프 대결(Diverging Bar).
+
+# User Experience
+### User Personas
+* **The Hardcore Fan:** "페이커와 쵸비의 이번 시즌 라인전 지표 차이가 궁금해."
+* **The Analyst:** "13.1 패치에서 바텀 라인전 스노우볼이 게임 승패에 미치는 영향이 얼마나 컸지?"
+
+### UI/UX Considerations
+* **Zero-Scroll Policy (Single View):** 사용자가 스크롤을 내리지 않고도 한 화면에서 모든 정보를 파악해야 함.
+    * Streamlit의 `st.columns`와 `st.container`를 활용한 그리드 레이아웃 필수.
+    * 그래프 크기는 화면 비율에 맞게 자동 조정 (`use_container_width=True`).
+* **Visual Hierarchy:** 핵심 요약 숫자(Metric) → 메인 그래프 → 세부 데이터 순서로 시선 유도.
+
+---
+
+# Technical Architecture
+### System Components
+* **Frontend/Backend:** Python **Streamlit** (단일 언어로 빠른 웹 구축).
+* **Visualization Engine:** **Plotly** (Zoom, Hover 등 인터랙티브 기능 제공).
+* **Data Processing:** **Pandas** DataFrame.
+
+### Data Models
+* **Source:** `./data/lck.csv` (로컬 CSV 파일).
+* **Data Segmentation:** 데이터 로드 시 `playerid` 또는 `position` 컬럼을 기준으로 두 개의 DataFrame으로 분리하여 메모리에 캐싱 (`@st.cache_data`).
+    1.  `df_players`: 개별 선수 데이터 (포지션 정보 포함).
+    2.  `df_teams`: 팀 단위 데이터.
+
+### Infrastructure Requirements
+* 로컬 Python 환경 (3.9+).
+* 필수 라이브러리: `streamlit`, `plotly`, `pandas`.
+
+# Development Roadmap
+### Phase 1: Foundation & EDA (MVP Basis)
+* 데이터 로더 구현 (CSV 읽기 및 전처리/결함 제거).
+* 기본 레이아웃 및 사이드바(필터) 구현.
+* **Page 1 (EDA):** 데이터 요약 및 미리보기 기능 구현.
+
+### Phase 2: Core Visualization
+* **Page 2 (Champion), 3 (Player), 4 (Team):** 각 페이지별 핵심 Plotly 차트 구현.
+* 육각형 레이더 차트(Radar Chart) 모듈화 (재사용 목적).
+
+### Phase 3: Advanced Comparison Logic
+* **Page 5 (P vs P):** 포지션 기반 필터링 로직 구현 (Player A 선택 → A의 포지션 감지 → Player B 리스트 필터링).
+* **Page 6 (T vs T):** 팀 비교 뷰 구현.
+
+### Phase 4: UI Polish
+* 스크롤 제거를 위한 그리드 레이아웃 최적화.
+* CSS 조정 및 색상 테마 통일.
+
+# Logical Dependency Chain
+1.  **Data Ingestion (Pre-requisite):** `lck.csv`를 읽고 Player/Team으로 분리하는 함수가 가장 먼저 작성되어야 함. 이것 없이는 어떤 페이지도 작동 불가.
+2.  **Sidebar State Management:** 사이드바의 필터 값(연도, 패치 등)이 `st.session_state` 혹은 변수로 저장되어 데이터 프레임을 슬라이싱하는 로직 우선 구축.
+3.  **Component Library:** 자주 쓰이는 차트(예: Radar Chart, Bar Chart)를 함수로 만들어두어 개발 속도 가속화.
+4.  **Sequential Page Build:**
+    * *EDA* (데이터 검증용) → *Profiles* (단일 개체 시각화) → *Comparison* (복수 개체 및 로직 필요) 순으로 개발하여 복잡도를 점진적으로 높임.
+
+# Risks and Mitigations
+### 1. Layout Overflow (Scroll Issue)
+* **Risk:** 데이터가 많거나 그래프가 크면 스크롤이 생겨 "한 페이지 구성" 요구사항 위배.
+* **Mitigation:** Plotly 그래프의 `height`를 고정 픽셀 대신 비율로 제어하거나, 컴팩트한 차트(예: Sparkline) 활용. 텍스트 정보는 Expander로 숨김 처리 고려.
+
+### 2. Data Quality & Filtering Logic
+* **Risk:** `lck.csv`에 특정 시즌/패치 데이터가 누락되어 있거나, 선수 포지션이 잘못 기입된 경우 비교 페이지 로직 붕괴.
+* **Mitigation:** 데이터 로드 시점에 `dropna()` 및 이상치 처리. 포지션 데이터가 없는 경우 'Unknown'으로 처리하되 비교군에서 제외.
+
+### 3. Performance
+* **Risk:** 매번 필터를 바꿀 때마다 전체 CSV를 다시 읽으면 속도 저하.
+* **Mitigation:** Streamlit의 캐싱 기능(`st.cache_data`)을 적극 활용하여 필터링 연산만 수행하도록 최적화.
+
+# Appendix
+### Key Metrics Definition
+* **KDA:** `(Kills + Assists) / Deaths` (Deaths가 0일 경우 1로 계산).
+* **DPM:** Damage Per Minute (분당 딜량).
+* **GPM:** Gold Per Minute (분당 골드).
+* **VSPM:** Vision Score Per Minute (분당 시야 점수).
+
+### Visualization Library Reference
+* Plotly Radar Chart: `plotly.graph_objects.Scatterpolar`
+* Streamlit Layout: `st.columns([1, 2, 1])` 과 같은 비율 분할 사용 권장.
