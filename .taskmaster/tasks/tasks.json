@@ -133,15 +133,15 @@
         "dependencies": [
           11
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
             "title": "Implement Core `create_radar_chart` Function",
             "description": "Create the initial `create_radar_chart` function in `components/charts.py`. This function will accept a dictionary of statistics and a title, and generate a basic, single-trace radar chart using Plotly's `go.Scatterpolar`.",
             "dependencies": [],
-            "details": "In a new file `components/charts.py`, define the function `create_radar_chart(stats_data: dict, title: str)`. It should extract categories and values from the input dictionary and use `go.Figure` and `go.Scatterpolar` to construct a basic chart. The function must return a `go.Figure` object.",
-            "status": "pending",
+            "details": "In a new file `components/charts.py`, define the function `create_radar_chart(stats_data: dict, title: str)`. It should extract categories and values from the input dictionary and use `go.Figure` and `go.Scatterpolar` to construct a basic chart. The function must return a `go.Figure` object.\n<info added on 2025-11-20T13:54:48.500Z>\n\"Create a `components` package directory with an `__init__.py` file for organizing reusable UI utilities. Within this package, add a `components/charts.py` file exporting a `create_radar_chart` function. This function should be designed to accept either a dictionary, a pandas Series, or a DataFrame row for the stats data, and should normalize the input into an `OrderedDict` to maintain deterministic ordering. Use Plotly Graph Objects (`go.Figure`, `go.Scatterpolar`) to build a single-trace radar chart. The function must support optional color and fill parameters, with defaults that align with a theme-consistent palette. Add minimal validation to ensure stats are not empty and can be coerced to numeric types, raising a `ValueError` with a clear message if validation fails. Finally, write a docstring that explains the function's usage and the expected input data shape.\"\n</info added on 2025-11-20T13:54:48.500Z>\n<info added on 2025-11-20T13:56:17.571Z>\nTo support the player and team comparison features (Tasks 17 & 18), the `create_radar_chart` function in `components/charts.py` must be extended to handle multiple overlaid traces.\n\nModify the function signature to accept a list of data inputs (e.g., `list[dict]`) and a corresponding list of names for the legend. The function should iterate through these inputs, adding a `go.Scatterpolar` trace for each one. Ensure distinct colors are automatically assigned to each trace for clear visual differentiation.\n\nAdditionally, create a new test file at `tests/test_charts.py`. Implement unit tests that cover:\n1.  The existing single-trace functionality.\n2.  The new multi-trace functionality, verifying that the correct number of traces are added to the figure.\n3.  Input validation, confirming that `ValueError` is raised for mismatched data and name list lengths.\n</info added on 2025-11-20T13:56:17.571Z>",
+            "status": "done",
             "testStrategy": "Manually call the function with sample data (e.g., `{'KDA': 5, 'DPM': 650}`) and verify it returns a `go.Figure` object without errors. A visual inspection of the rendered chart in a notebook is recommended to confirm basic functionality."
           },
           {
@@ -151,8 +151,8 @@
             "dependencies": [
               1
             ],
-            "details": "Use `fig.update_layout()` to customize the chart's appearance. Specifically, adjust the polar axis, set the title, and manage the legend visibility as per the pseudo-code. Create a `tests/test_charts.py` file and add a test case that calls `create_radar_chart` with mock data and asserts that the returned object is a `go.Figure` instance and contains the expected data trace.",
-            "status": "pending",
+            "details": "Use `fig.update_layout()` to customize the chart's appearance. Specifically, adjust the polar axis, set the title, and manage the legend visibility as per the pseudo-code. Create a `tests/test_charts.py` file and add a test case that calls `create_radar_chart` with mock data and asserts that the returned object is a `go.Figure` instance and contains the expected data trace.\n<info added on 2025-11-20T13:57:05.621Z>\n```json\n\"Refactor the `create_radar_chart` function in `components/charts.py` to support multiple data series. The function signature should be extended to accept a list of data dictionaries (`series`) and a list of corresponding names (`labels`), while maintaining a convenience wrapper or internal logic for backward compatibility with the existing single-series input.\\n\\nImplement multi-trace support by iterating through the `series` and adding a `go.Scatterpolar` trace for each. Automatically assign distinct colors to each trace using a Plotly qualitative color palette (e.g., `plotly.express.colors.qualitative.Plotly`). The legend should be configured to be visible when multiple traces are provided.\\n\\nAdd an optional `radar_range` parameter to allow for a manual override of the radial axis range. If this parameter is not provided, the function should compute the maximum value from all data points across all series to set the range automatically, ensuring consistent scaling in comparisons.\\n\\nExpand the unit tests in `tests/test_charts.py` to cover the following scenarios:\\n- A single-trace chart to ensure backward compatibility.\\n- A multi-trace chart, asserting the correct number of traces are generated.\\n- Input validation errors using `pytest.raises` for empty data, mismatched series and label counts, and non-numeric data values.\\n\\nFinally, ensure `pytest` is included as a development dependency in the `pyproject.toml` file to enable test execution.\"\n```\n</info added on 2025-11-20T13:57:05.621Z>\n<info added on 2025-11-20T13:58:47.200Z>\n```json\n\"Completed the refactoring of `create_radar_chart` in `components/charts.py` to support multi-series data, while maintaining backward compatibility for single-series input. The implementation includes automatic color cycling, manual `radar_range` overrides, custom hover templates, and automated legend handling. Expanded unit tests in `tests/test_charts.py` now cover single-trace, multi-trace, and validation error scenarios for mismatched labels and non-numeric data. The `pytest` development dependency has been added to `pyproject.toml`. The module now ensures deterministic category ordering and is ready for use in comparison pages.\"\n```\n</info added on 2025-11-20T13:58:47.200Z>",
+            "status": "done",
             "testStrategy": "Run the unit test suite and confirm the new test passes. The test should check the type of the returned object and verify that the figure's data and layout properties (like title and categories) match the input mock data."
           }
         ]
@@ -496,7 +496,7 @@
     ],
     "metadata": {
       "created": "2025-11-14T13:00:08.744Z",
-      "updated": "2025-11-20T13:43:36.603Z",
+      "updated": "2025-11-20T13:58:57.851Z",
       "description": "Tasks for master context"
     }
   }
