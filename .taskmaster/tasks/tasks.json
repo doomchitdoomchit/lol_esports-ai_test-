@@ -167,15 +167,15 @@
         "dependencies": [
           12
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
             "title": "Set Up Champion Stats Page and Apply Global Filters",
             "description": "Create the new page file `pages/2_Champion_Stats.py` and implement the logic to apply the global filters from `st.session_state` to the main DataFrame.",
             "dependencies": [],
-            "details": "Create the Python file for the new Streamlit page. Add a title and import necessary libraries. Retrieve filter values from `st.session_state.filters` and use them to slice the main player DataFrame.",
-            "status": "pending",
+            "details": "Create the Python file for the new Streamlit page. Add a title and import necessary libraries. Retrieve filter values from `st.session_state.filters` and use them to slice the main player DataFrame.\n<info added on 2025-11-20T14:56:03.623Z>\nCreate the new page file `pages/2_Champion_Stats.py`. Import `streamlit as st`, `pandas as pd`, `plotly.express as px`, and the shared `load_data` helper.\n\nAdopt the global filtering pattern from the EDA page (`pages/1_EDA.py`). Read the filter dictionary from `st.session_state.get('filters')`. If filters are not available, fall back to using the unfiltered `df_players` DataFrame and display a warning message.\n\nApply the filter mask to the `df_players` DataFrame to produce a `filtered_df`. For debugging during development, add an `st.checkbox` to optionally display the `.shape` of the `filtered_df`. The primary output of this step will be the `filtered_df` object, which will be consumed by downstream charting sections.\n</info added on 2025-11-20T14:56:03.623Z>\n<info added on 2025-11-20T14:59:06.308Z>\nA new page entry has been added at `pages/2_Champion_Stats.py`, which successfully mirrors the global filter workflow from the EDA page. The page now loads player data using `load_data()`, applies the `st.session_state['filters']` with necessary safeguards, and includes a debug checkbox for inspecting the filtered data. Placeholders have been added for the upcoming charts to ensure the page renders correctly before the visualization logic is implemented.\n</info added on 2025-11-20T14:59:06.308Z>",
+            "status": "done",
             "testStrategy": "Navigate to the 'Champion Stats' page and verify it loads without errors. Check that the page title is displayed correctly. Add a `st.dataframe(filtered_df.head())` to temporarily confirm that the data is being filtered based on sidebar selections."
           },
           {
@@ -186,7 +186,7 @@
               1
             ],
             "details": "Use `pandas.groupby('champion')` on the filtered DataFrame. Use `.agg()` to calculate win rate and pick counts. Separately, determine the total number of games in the filtered set and the ban counts for each champion to calculate final pick and ban rates.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Validate the calculated metrics for a known champion and a small, manually filtered dataset. Ensure that pick rate + ban rate does not exceed reasonable limits and that win rates are between 0 and 1."
           },
           {
@@ -197,7 +197,7 @@
               2
             ],
             "details": "Use `plotly.express.scatter` to create the visualization. Pass the aggregated DataFrame, setting `x='pick_rate'`, `y='win_rate'`, and `hover_name` to the champion's name for interactivity.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Render the scatter plot on the page. Hover over several data points to verify that the correct champion names and data appear in the tooltip. Check that the axes are correctly labeled as 'Pick Rate' and 'Win Rate'."
           },
           {
@@ -208,7 +208,7 @@
               2
             ],
             "details": "First, sort the aggregated DataFrame by `ban_rate` in descending order and select the top 10. Use `plotly.express.bar` to create a horizontal bar chart. Then, use `st.columns(2)` to place the scatter plot in the first column and the new bar chart in the second column.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Verify that the bar chart displays exactly 10 champions and is sorted with the highest ban rate at the top. Confirm that both charts appear side-by-side. Check that `use_container_width=True` is used to ensure charts fit the columns."
           }
         ]
@@ -496,7 +496,7 @@
     ],
     "metadata": {
       "created": "2025-11-14T13:00:08.744Z",
-      "updated": "2025-11-20T13:58:57.851Z",
+      "updated": "2025-11-21T00:15:13.664Z",
       "description": "Tasks for master context"
     }
   }
