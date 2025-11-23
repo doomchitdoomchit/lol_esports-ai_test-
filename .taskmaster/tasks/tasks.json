@@ -224,7 +224,7 @@
           12,
           14
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -232,7 +232,7 @@
             "description": "Create the basic structure for the Player Profile page in `pages/3_Player_Profile.py`. This includes adding a title and implementing a Streamlit selectbox to allow users to choose a player from the filtered dataset, then filtering the data accordingly.",
             "dependencies": [],
             "details": "Create the file `pages/3_Player_Profile.py`. Use the globally filtered DataFrame from `st.session_state`. Add a `st.selectbox` populated with unique `playerid` values. When a player is selected, filter the main DataFrame to create a `player_data` subset for that player.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Navigate to the Player Profile page. Verify the selectbox is populated with player IDs. Select a player and temporarily display the filtered `player_data` DataFrame using `st.dataframe` to confirm it contains only data for the selected player."
           },
           {
@@ -243,7 +243,7 @@
               1
             ],
             "details": "Using the filtered `player_data`, calculate the mean for 'KDA', 'DPM', 'GPM', and 'VSPM'. Pass these stats to the `create_radar_chart` function. Separately, use `plotly.express.line` to plot 'KDA' against 'Patch'. Display both charts using `st.plotly_chart`.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "On the Player Profile page, select a player. Verify that a radar chart and a KDA trend line chart are displayed. Change the player selection and confirm both charts update to reflect the new player's data."
           },
           {
@@ -252,7 +252,7 @@
             "description": "Create the `pages/4_Team_Profile.py` file for the Team Profile page. Implement a Streamlit selectbox to allow users to choose a team, and filter the data for the selected team.",
             "dependencies": [],
             "details": "Create the new page file `pages/4_Team_Profile.py`. Add a `st.selectbox` with options populated from the unique team names in the filtered dataset. When a team is selected, filter the data to create a `team_data` subset.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Navigate to the Team Profile page. Check that the selectbox for teams is present and correctly populated. Select a team and use `st.dataframe` to verify that the data is filtered correctly for the selected team."
           },
           {
@@ -263,7 +263,7 @@
               3
             ],
             "details": "Using the `team_data` subset, calculate the average team-wide stats for key metrics. Use the `create_radar_chart` function for visualization. Create a line chart with `plotly.express.line` to show a metric's trend over 'Patch'. Display both charts.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Select a team on the Team Profile page. Verify that a radar chart and a line chart appear, displaying the team's aggregate stats. Change the selected team and confirm the charts update accordingly."
           }
         ]
@@ -496,7 +496,7 @@
     ],
     "metadata": {
       "created": "2025-11-14T13:00:08.744Z",
-      "updated": "2025-11-21T00:15:13.664Z",
+      "updated": "2025-11-23T07:11:40.041Z",
       "description": "Tasks for master context"
     }
   }
