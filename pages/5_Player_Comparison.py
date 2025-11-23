@@ -341,59 +341,62 @@ def render_page() -> pd.DataFrame:
         stats_a = _get_player_metrics(player_a_data)
         stats_b = _get_player_metrics(player_b_data)
         
-        # Display basic info
-        info_col1, info_col2 = st.columns(2)
-        
-        with info_col1:
-            st.metric("Player A 경기 수", len(player_a_data))
-            if "result" in player_a_data.columns:
-                wins_a = pd.to_numeric(player_a_data["result"], errors="coerce").sum()
-                win_rate_a = (wins_a / len(player_a_data) * 100) if len(player_a_data) > 0 else 0
-                st.metric("Player A 승률", f"{win_rate_a:.1f}%")
-        
-        with info_col2:
-            st.metric("Player B 경기 수", len(player_b_data))
-            if "result" in player_b_data.columns:
-                wins_b = pd.to_numeric(player_b_data["result"], errors="coerce").sum()
-                win_rate_b = (wins_b / len(player_b_data) * 100) if len(player_b_data) > 0 else 0
-                st.metric("Player B 승률", f"{win_rate_b:.1f}%")
+        # Display basic info in a container
+        with st.container():
+            info_col1, info_col2 = st.columns(2)
+            
+            with info_col1:
+                st.metric("Player A 경기 수", len(player_a_data))
+                if "result" in player_a_data.columns:
+                    wins_a = pd.to_numeric(player_a_data["result"], errors="coerce").sum()
+                    win_rate_a = (wins_a / len(player_a_data) * 100) if len(player_a_data) > 0 else 0
+                    st.metric("Player A 승률", f"{win_rate_a:.1f}%")
+            
+            with info_col2:
+                st.metric("Player B 경기 수", len(player_b_data))
+                if "result" in player_b_data.columns:
+                    wins_b = pd.to_numeric(player_b_data["result"], errors="coerce").sum()
+                    win_rate_b = (wins_b / len(player_b_data) * 100) if len(player_b_data) > 0 else 0
+                    st.metric("Player B 승률", f"{win_rate_b:.1f}%")
         
         st.divider()
         
-        # Create comparison charts
-        chart_col1, chart_col2 = st.columns(2)
+        # Create comparison charts in a container
+        with st.container():
+            chart_col1, chart_col2 = st.columns(2)
+            
+            with chart_col1:
+                st.subheader("레이더 차트 비교")
+                radar_fig = _create_overlaid_radar_chart(
+                    stats_a,
+                    stats_b,
+                    player_a,
+                    player_b,
+                    title=f"{player_a} vs {player_b}"
+                )
+                st.plotly_chart(radar_fig, use_container_width=True)
+            
+            with chart_col2:
+                st.subheader("통계 차이 비교")
+                diverging_fig = _create_diverging_bar_chart(
+                    stats_a,
+                    stats_b,
+                    player_a,
+                    player_b,
+                    title=f"{player_a} vs {player_b}"
+                )
+                st.plotly_chart(diverging_fig, use_container_width=True)
         
-        with chart_col1:
-            st.subheader("레이더 차트 비교")
-            radar_fig = _create_overlaid_radar_chart(
-                stats_a,
-                stats_b,
-                player_a,
-                player_b,
-                title=f"{player_a} vs {player_b}"
-            )
-            st.plotly_chart(radar_fig, use_container_width=True)
-        
-        with chart_col2:
-            st.subheader("통계 차이 비교")
-            diverging_fig = _create_diverging_bar_chart(
-                stats_a,
-                stats_b,
-                player_a,
-                player_b,
-                title=f"{player_a} vs {player_b}"
-            )
-            st.plotly_chart(diverging_fig, use_container_width=True)
-        
-        # Debug option
-        if st.checkbox("디버그: 플레이어 통계 표시", value=False):
-            debug_col1, debug_col2 = st.columns(2)
-            with debug_col1:
-                st.write(f"**{player_a} 통계:**")
-                st.json(stats_a)
-            with debug_col2:
-                st.write(f"**{player_b} 통계:**")
-                st.json(stats_b)
+        # Debug section in expander
+        with st.expander("🔧 디버그 정보", expanded=False):
+            if st.checkbox("플레이어 통계 표시", value=False):
+                debug_col1, debug_col2 = st.columns(2)
+                with debug_col1:
+                    st.write(f"**{player_a} 통계:**")
+                    st.json(stats_a)
+                with debug_col2:
+                    st.write(f"**{player_b} 통계:**")
+                    st.json(stats_b)
     
     return filtered_df
 

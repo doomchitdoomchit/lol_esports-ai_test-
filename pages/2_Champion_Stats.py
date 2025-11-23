@@ -146,10 +146,6 @@ def render_page() -> pd.DataFrame:
         st.warning("필터링된 데이터가 없습니다. 필터를 조정해 주세요.")
         return filtered_df
 
-    if st.checkbox("디버그: 필터링된 데이터 미리보기", value=False):
-        st.write("Shape:", filtered_df.shape)
-        st.dataframe(filtered_df.head())
-
     # Calculate champion statistics
     champ_stats = _calculate_champion_stats(filtered_df)
 
@@ -157,20 +153,27 @@ def render_page() -> pd.DataFrame:
         st.info("챔피언 통계를 계산할 수 없습니다.")
         return filtered_df
 
-    # Create two columns for side-by-side layout
-    col1, col2 = st.columns(2)
+    # Create two columns for side-by-side layout in a container
+    with st.container():
+        col1, col2 = st.columns(2)
 
-    # Scatter plot: Pick Rate vs Win Rate
-    with col1:
-        scatter_fig = _create_pick_win_scatter(champ_stats)
-        if scatter_fig:
-            st.plotly_chart(scatter_fig, use_container_width=True)
+        # Scatter plot: Pick Rate vs Win Rate
+        with col1:
+            scatter_fig = _create_pick_win_scatter(champ_stats)
+            if scatter_fig:
+                st.plotly_chart(scatter_fig, use_container_width=True)
 
-    # Bar chart: Top 10 Banned Champions
-    with col2:
-        ban_fig = _create_top_banned_chart(champ_stats)
-        if ban_fig:
-            st.plotly_chart(ban_fig, use_container_width=True)
+        # Bar chart: Top 10 Banned Champions
+        with col2:
+            ban_fig = _create_top_banned_chart(champ_stats)
+            if ban_fig:
+                st.plotly_chart(ban_fig, use_container_width=True)
+    
+    # Debug section in expander
+    with st.expander("🔧 디버그 정보", expanded=False):
+        if st.checkbox("필터링된 데이터 미리보기", value=False):
+            st.write("Shape:", filtered_df.shape)
+            st.dataframe(filtered_df.head())
 
     return filtered_df
 

@@ -85,7 +85,7 @@ def _win_loss_chart(filtered_df):
         color="Result",
         color_discrete_map={"Win": "#2ecc71", "Loss": "#e74c3c"},
     )
-    fig.update_layout(legend_title_text="", margin=dict(t=40, b=10))
+    fig.update_layout(legend_title_text="", margin=dict(t=20, b=10))
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -107,13 +107,30 @@ def render_page():
     filtered_df = _apply_filters(df_players, filters)
 
     st.caption("글로벌 필터에 맞춰 플레이어 데이터를 슬라이싱했습니다.")
-    _summaries(filtered_df)
-    _win_loss_chart(filtered_df)
-    _data_preview(filtered_df)
-
-    if st.checkbox("디버그: 필터 상태 보기", value=False):
-        st.json(filters)
-        st.write("Filtered shape:", filtered_df.shape)
+    
+    # Summary metrics in a container
+    with st.container():
+        _summaries(filtered_df)
+    
+    st.divider()
+    
+    # Charts in a two-column layout
+    with st.container():
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            _win_loss_chart(filtered_df)
+        
+        with col2:
+            # Data preview moved to expander
+            with st.expander("📊 데이터 프리뷰", expanded=False):
+                _data_preview(filtered_df)
+    
+    # Debug section in expander
+    with st.expander("🔧 디버그 정보", expanded=False):
+        if st.checkbox("필터 상태 보기", value=False):
+            st.json(filters)
+            st.write("Filtered shape:", filtered_df.shape)
 
     return filtered_df
 

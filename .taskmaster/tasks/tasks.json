@@ -394,7 +394,7 @@
           17,
           18
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -402,7 +402,7 @@
             "description": "Reorganize the Exploratory Data Analysis (EDA) page using `st.columns` and `st.container` to fit all content, including charts and metrics, without requiring vertical scrolling.",
             "dependencies": [],
             "details": "Review `EDA.py`. Group related elements into `st.container()` sections. Use `st.columns()` to arrange charts and summary statistics horizontally. Ensure all `st.plotly_chart` calls include `use_container_width=True` to prevent overflow.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Visually inspect the EDA page on a 1920x1080 screen to confirm no vertical scrollbar appears. Resize the browser window to verify the layout and charts adjust responsively without breaking."
           },
           {
@@ -411,7 +411,7 @@
             "description": "Restructure the Champion Stats page to eliminate vertical scrolling by implementing a compact, grid-based layout for champion metrics and performance charts.",
             "dependencies": [],
             "details": "In `Champion_Stats.py`, use `st.columns` to place champion-specific metrics, win rate charts, and pick/ban stats side-by-side. Wrap logical groups in `st.container` and set `use_container_width=True` for all charts.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Verify the Champion Stats page displays correctly without a vertical scrollbar. Test with various champion selections to ensure the layout remains stable and responsive on smaller window sizes."
           },
           {
@@ -420,7 +420,7 @@
             "description": "Update the Player and Team Profile pages to present all statistics and charts, including radar charts, in a compact, no-scroll format using `st.container` and `st.columns`.",
             "dependencies": [],
             "details": "Modify the profile page templates. Arrange key metrics, historical performance graphs, and radar charts into a columnar layout. Use `st.container` to encapsulate logical sections of the profile, such as 'Overall Performance' or 'Match History'.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Load several different player and team profiles to confirm the zero-scroll policy is met. Ensure radar charts and other visualizations resize properly within their designated columns on a standard 1920x1080 resolution."
           },
           {
@@ -429,7 +429,7 @@
             "description": "Redesign the player and team comparison pages to display side-by-side statistics and charts within the viewport, eliminating the need for vertical scrolling to compare entities.",
             "dependencies": [],
             "details": "Use `st.columns([1, 1])` to create a clear two-column, side-by-side comparison view. Place each entity's statistics and corresponding charts within their respective column. Ensure all Plotly charts use `use_container_width=True`.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Perform a comparison between two players and then two teams. Verify the layout is compact and fits on a single screen without vertical scrolling. Check that the layout responsively adjusts when the browser window is resized."
           },
           {
@@ -443,7 +443,7 @@
               4
             ],
             "details": "After the primary layout refactoring, review all pages (`EDA.py`, `Champion_Stats.py`, etc.) and identify any sections with excessive text or large tables. Wrap these sections in an `st.expander` with a clear title, collapsed by default.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Navigate through all pages and confirm that sections with potentially long content are correctly hidden within expanders. Click to expand them and verify the content is displayed correctly without breaking the overall page structure."
           }
         ]
@@ -496,7 +496,7 @@
     ],
     "metadata": {
       "created": "2025-11-14T13:00:08.744Z",
-      "updated": "2025-11-23T08:01:07.896Z",
+      "updated": "2025-11-23T08:12:39.833Z",
       "description": "Tasks for master context"
     }
   }

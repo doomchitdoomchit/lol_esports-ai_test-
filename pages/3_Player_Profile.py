@@ -225,45 +225,48 @@ def render_page() -> pd.DataFrame:
         st.warning(f"{selected_player} 플레이어의 데이터가 없습니다.")
         return filtered_df
     
-    # Display basic info
-    col1, col2, col3 = st.columns(3)
-    
-    total_games = len(player_data)
-    col1.metric("총 경기 수", f"{total_games}")
-    
-    if "result" in player_data.columns:
-        wins = pd.to_numeric(player_data["result"], errors="coerce")
-        win_count = wins.sum() if not wins.isna().all() else 0
-        win_rate = (win_count / total_games * 100) if total_games > 0 else 0
-        col2.metric("승률", f"{win_rate:.1f}%")
-    
-    if "position" in player_data.columns:
-        position = player_data["position"].iloc[0] if not player_data["position"].empty else "N/A"
-        col3.metric("포지션", position)
+    # Display basic info in a container
+    with st.container():
+        col1, col2, col3 = st.columns(3)
+        
+        total_games = len(player_data)
+        col1.metric("총 경기 수", f"{total_games}")
+        
+        if "result" in player_data.columns:
+            wins = pd.to_numeric(player_data["result"], errors="coerce")
+            win_count = wins.sum() if not wins.isna().all() else 0
+            win_rate = (win_count / total_games * 100) if total_games > 0 else 0
+            col2.metric("승률", f"{win_rate:.1f}%")
+        
+        if "position" in player_data.columns:
+            position = player_data["position"].iloc[0] if not player_data["position"].empty else "N/A"
+            col3.metric("포지션", position)
     
     st.divider()
     
-    # Create two-column layout for charts
-    col1, col2 = st.columns(2)
+    # Create two-column layout for charts in a container
+    with st.container():
+        col1, col2 = st.columns(2)
+        
+        # Radar chart
+        with col1:
+            st.subheader("성능 지표 레이더 차트")
+            radar_fig = _create_radar_chart_for_player(player_data, selected_player)
+            if radar_fig:
+                st.plotly_chart(radar_fig, use_container_width=True)
+        
+        # Trend line chart
+        with col2:
+            st.subheader("KDA 트렌드")
+            trend_fig = _create_trend_line(player_data, selected_player, metric="KDA")
+            if trend_fig:
+                st.plotly_chart(trend_fig, use_container_width=True)
     
-    # Radar chart
-    with col1:
-        st.subheader("성능 지표 레이더 차트")
-        radar_fig = _create_radar_chart_for_player(player_data, selected_player)
-        if radar_fig:
-            st.plotly_chart(radar_fig, use_container_width=True)
-    
-    # Trend line chart
-    with col2:
-        st.subheader("KDA 트렌드")
-        trend_fig = _create_trend_line(player_data, selected_player, metric="KDA")
-        if trend_fig:
-            st.plotly_chart(trend_fig, use_container_width=True)
-    
-    # Debug option
-    if st.checkbox("디버그: 플레이어 데이터 미리보기", value=False):
-        st.write("Shape:", player_data.shape)
-        st.dataframe(player_data.head())
+    # Debug section in expander
+    with st.expander("🔧 디버그 정보", expanded=False):
+        if st.checkbox("플레이어 데이터 미리보기", value=False):
+            st.write("Shape:", player_data.shape)
+            st.dataframe(player_data.head())
     
     return filtered_df
 
