@@ -278,7 +278,7 @@
         "dependencies": [
           16
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -286,7 +286,7 @@
             "description": "Create the `pages/5_Player_Comparison.py` file and establish the basic two-column layout using `st.columns`. Implement the selectbox for 'Player A' in the first column.",
             "dependencies": [],
             "details": "Create the new page file. Use `st.columns(2)` to define `col1` and `col2`. In `col1`, add a `st.selectbox` for 'Player A' populated with unique player IDs from the filtered dataframe.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Run the app and navigate to the 'Player Comparison' page. Verify that a two-column layout is present and the 'Player A' selectbox is visible and populated with player names."
           },
           {
@@ -297,7 +297,7 @@
               1
             ],
             "details": "Inside an `if player_a:` block, find the position of the selected player. Filter the dataframe to find all other players with the same position. Use this filtered list to populate the options for the 'Player B' `st.selectbox` in `col2`.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Select a player in the 'Player A' dropdown (e.g., a 'JUNGLE' player). Check that the 'Player B' dropdown is then populated *only* with other 'JUNGLE' players from the dataset."
           },
           {
@@ -308,7 +308,7 @@
               2
             ],
             "details": "After 'Player B' is selected, filter the main dataframe to get the rows for `player_a` and `player_b`. Aggregate or select the key performance indicators (e.g., KDA, GPM, DPM) for each player to be used in the charts.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Use `st.write` or `st.dataframe` to temporarily display the fetched stats for Player A and Player B. Verify that the correct data is retrieved for the selected players."
           },
           {
@@ -319,7 +319,7 @@
               3
             ],
             "details": "Use Plotly's `graph_objects.Scatterpolar` to create two traces, one for each player. Add both traces to the same figure to create the overlay effect. The data for each trace will come from the prepared stats in the previous step.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Select two players. Verify that a radar chart is rendered below the selectors. Check that there are two overlapping polygons, one for each player, and that the axes correspond to the chosen comparison metrics."
           },
           {
@@ -330,7 +330,7 @@
               3
             ],
             "details": "For each stat to compare, calculate the difference (`stat_A - stat_B`). Create a bar chart where positive bars indicate Player A is better and negative bars indicate Player B is better. Use Plotly's `graph_objects.Bar` and style the colors based on the sign of the value.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Select two players. Verify a diverging bar chart is displayed. Check that the bars correctly represent the magnitude and direction of the statistical difference between the two players. For example, if Player A has a higher KDA, the KDA bar should be on Player A's side."
           }
         ]
@@ -496,7 +496,7 @@
     ],
     "metadata": {
       "created": "2025-11-14T13:00:08.744Z",
-      "updated": "2025-11-23T07:11:40.041Z",
+      "updated": "2025-11-23T07:14:02.409Z",
       "description": "Tasks for master context"
     }
   }
