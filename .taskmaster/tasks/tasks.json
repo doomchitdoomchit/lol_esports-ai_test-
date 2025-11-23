@@ -345,7 +345,7 @@
         "dependencies": [
           16
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -353,7 +353,7 @@
             "description": "Create the user interface for the 'Team vs. Team' comparison page, featuring two independent selectboxes for users to choose 'Team A' and 'Team B'.",
             "dependencies": [],
             "details": "Create the file `pages/6_Team_Comparison.py`. Use `st.columns(2)` to set up a two-column layout. Place a `st.selectbox` for 'Team A' in the first column and another for 'Team B' in the second. Populate both selectboxes with team names from the `df_teams` DataFrame.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Navigate to the 'Team Comparison' page. Verify that two selectbox widgets are displayed side-by-side. Confirm the options in both dropdowns are populated with the correct list of teams. Check that selecting a team in one box does not affect the selection or options in the other."
           },
           {
@@ -364,7 +364,7 @@
               1
             ],
             "details": "Once two teams are selected from the UI, filter the global player dataframe to get all match data for each team. For each team's dataset, group the data and calculate the mean of key statistical columns (e.g., kills, deaths, assists, gold earned) to produce two aggregate data series.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "After selecting two teams, use `st.write` or a debugger to inspect the two resulting data structures containing the aggregated stats. Manually verify that the calculated averages for a few key stats are correct based on the source `df_players` data for the selected teams and active filters."
           },
           {
@@ -375,7 +375,7 @@
               2
             ],
             "details": "Using the aggregated data series from the previous subtask, create a `plotly.graph_objects.Figure` with two `go.Scatterpolar` traces for an overlaid radar chart. Add this figure to the Streamlit page. Also consider adding a series of horizontal bar charts to compare individual stats directly.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Select two teams and verify that a comparison chart (e.g., radar chart) is rendered. Check that the chart correctly labels both teams in its legend. Hover over the chart data points to confirm that the tooltips display the correct statistical values that were calculated in the previous step."
           }
         ]
@@ -496,7 +496,7 @@
     ],
     "metadata": {
       "created": "2025-11-14T13:00:08.744Z",
-      "updated": "2025-11-23T07:14:02.409Z",
+      "updated": "2025-11-23T08:01:07.896Z",
       "description": "Tasks for master context"
     }
   }
