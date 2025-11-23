@@ -10,8 +10,10 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-DEFAULT_TRACE_COLOR = "#1f77b4"
-QUAL_COLORS = px.colors.qualitative.Plotly
+from config.colors import CHART_COLORS, QUALITATIVE_COLORS
+
+DEFAULT_TRACE_COLOR = CHART_COLORS["primary"]
+QUAL_COLORS = QUALITATIVE_COLORS
 
 
 def _normalize_stats(stats_data: Mapping | MutableMapping | pd.Series | pd.DataFrame) -> OrderedDict[str, float]:
@@ -122,6 +124,8 @@ def create_radar_chart(
             angularaxis=dict(tickfont=dict(size=11)),
         ),
         margin=dict(l=20, r=20, t=60, b=40),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
     )
 
     return fig

@@ -10,6 +10,63 @@ from data_loader import load_data
 
 st.set_page_config(page_title="LCK Analytics", layout="wide")
 
+# Apply custom CSS for improved visual hierarchy
+st.markdown("""
+<style>
+    /* Improve header and subheader styling */
+    h1 {
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+    
+    h2 {
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        font-size: 1.5rem;
+    }
+    
+    h3 {
+        margin-top: 0.75rem;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        font-size: 1.2rem;
+    }
+    
+    /* Improve spacing for captions */
+    .stCaption {
+        margin-bottom: 1rem;
+    }
+    
+    /* Improve metric card spacing */
+    [data-testid="stMetricValue"] {
+        font-size: 2rem;
+    }
+    
+    /* Improve container spacing */
+    .stContainer {
+        padding: 0.5rem 0;
+    }
+    
+    /* Improve expander styling */
+    .streamlit-expanderHeader {
+        font-weight: 500;
+    }
+    
+    /* Reduce excessive padding in plotly charts */
+    .js-plotly-plot {
+        margin: 0;
+    }
+    
+    /* Improve divider visibility */
+    hr {
+        margin: 1rem 0;
+        border: none;
+        border-top: 1px solid #e0e0e0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 ALL_OPTION = "All"
 FILTER_CONFIG: Sequence[Tuple[str, str]] = (
     ("year", "Year"),

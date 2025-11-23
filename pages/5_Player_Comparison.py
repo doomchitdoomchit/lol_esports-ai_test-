@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from components.charts import create_radar_chart
+from config.colors import CHART_COLORS
 from data_loader import load_data
 
 
@@ -118,8 +119,8 @@ def _create_overlaid_radar_chart(
             theta=categories,
             fill="toself",
             name=player_a_name,
-            line=dict(color="#1f77b4", width=2),
-            marker=dict(color="#1f77b4"),
+            line=dict(color=CHART_COLORS["player_a"], width=2),
+            marker=dict(color=CHART_COLORS["player_a"]),
             hovertemplate=f"%{{theta}}: %{{r:.2f}} ({player_a_name})<extra></extra>",
         )
     )
@@ -131,8 +132,8 @@ def _create_overlaid_radar_chart(
             theta=categories,
             fill="toself",
             name=player_b_name,
-            line=dict(color="#ff7f0e", width=2),
-            marker=dict(color="#ff7f0e"),
+            line=dict(color=CHART_COLORS["player_b"], width=2),
+            marker=dict(color=CHART_COLORS["player_b"]),
             hovertemplate=f"%{{theta}}: %{{r:.2f}} ({player_b_name})<extra></extra>",
         )
     )
@@ -146,7 +147,7 @@ def _create_overlaid_radar_chart(
                 visible=True,
                 range=[0, max_val * 1.1 if max_val > 0 else 1],
                 tickfont=dict(size=11),
-                gridcolor="#dfe6e9",
+                gridcolor=CHART_COLORS["grid"],
             ),
             angularaxis=dict(tickfont=dict(size=11)),
         ),
@@ -175,7 +176,12 @@ def _create_diverging_bar_chart(
     diffs = [differences[cat] for cat in sorted_cats]
     
     # Determine colors based on sign
-    colors = ["#2ecc71" if diff > 0 else "#e74c3c" if diff < 0 else "#95a5a6" for diff in diffs]
+    colors = [
+        CHART_COLORS["positive"] if diff > 0 
+        else CHART_COLORS["negative"] if diff < 0 
+        else CHART_COLORS["neutral"] 
+        for diff in diffs
+    ]
     
     fig = go.Figure()
     
@@ -197,7 +203,7 @@ def _create_diverging_bar_chart(
         xaxis_title=f"차이 ({player_a_name} - {player_b_name})",
         yaxis_title="메트릭",
         yaxis={"categoryorder": "total ascending"},
-        shapes=[
+            shapes=[
             dict(
                 type="line",
                 xref="x",
@@ -206,7 +212,7 @@ def _create_diverging_bar_chart(
                 y0=0,
                 x1=0,
                 y1=1,
-                line=dict(color="#34495e", width=2, dash="dash"),
+                line=dict(color=CHART_COLORS["divider"], width=2, dash="dash"),
             )
         ],
         annotations=[
@@ -217,7 +223,7 @@ def _create_diverging_bar_chart(
                 yref="paper",
                 text=f"{player_a_name} 유리",
                 showarrow=False,
-                font=dict(color="#2ecc71", size=10),
+                font=dict(color=CHART_COLORS["positive"], size=10),
                 xanchor="right",
             ),
             dict(
@@ -227,7 +233,7 @@ def _create_diverging_bar_chart(
                 yref="paper",
                 text=f"{player_b_name} 유리",
                 showarrow=False,
-                font=dict(color="#e74c3c", size=10),
+                font=dict(color=CHART_COLORS["negative"], size=10),
                 xanchor="left",
             ),
         ],

@@ -9,6 +9,7 @@ import plotly.express as px
 import streamlit as st
 
 from components.charts import create_radar_chart
+from config.colors import CHART_COLORS
 from data_loader import load_data
 
 
@@ -121,7 +122,7 @@ def _create_radar_chart_for_team(team_data: pd.DataFrame, team_name: str):
     radar_fig = create_radar_chart(
         metrics,
         title=f"{team_name} 성능 지표",
-        trace_color="#2ecc71"
+        trace_color=CHART_COLORS["team_profile"]
     )
     return radar_fig
 

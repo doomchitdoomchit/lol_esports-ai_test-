@@ -8,6 +8,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from config.colors import CHART_COLORS, COLOR_DISCRETE_MAP
 from data_loader import load_data
 
 
@@ -83,7 +84,7 @@ def _win_loss_chart(filtered_df):
         values="Count",
         hole=0.35,
         color="Result",
-        color_discrete_map={"Win": "#2ecc71", "Loss": "#e74c3c"},
+        color_discrete_map=COLOR_DISCRETE_MAP["win_loss"],
     )
     fig.update_layout(legend_title_text="", margin=dict(t=20, b=10))
     st.plotly_chart(fig, use_container_width=True)

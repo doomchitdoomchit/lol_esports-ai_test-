@@ -458,7 +458,7 @@
         "dependencies": [
           19
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -466,7 +466,7 @@
             "description": "Create a centralized configuration file or Python module to define the application-wide color palette for Plotly charts, ensuring consistency across all visualizations.",
             "dependencies": [],
             "details": "Create a new file, for example `config/colors.py`. In this file, define a dictionary named `CHART_COLORS` that maps semantic names to hex color codes (e.g., {'win': '#2ca02c', 'loss': '#d62728', 'primary_accent': '#1f77b4'}). This will be the single source of truth for all chart colors.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Verify the creation of the color configuration file. Ensure it contains a well-defined dictionary of color codes and is importable by other modules without causing errors. Review the chosen colors for accessibility and visual appeal."
           },
           {
@@ -477,7 +477,7 @@
               1
             ],
             "details": "Iterate through all files that generate Plotly charts (e.g., `pages/1_EDA.py`, `components/charts.py`). Import the `CHART_COLORS` dictionary. Update the `plotly.express` or `plotly.graph_objects` calls to reference colors from this dictionary instead of using hardcoded strings.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Visually inspect all charts in the application after refactoring. Confirm that they all render with the new, consistent color scheme. Perform a code review to ensure no hardcoded color values remain in the chart generation logic."
           },
           {
@@ -488,7 +488,7 @@
               2
             ],
             "details": "Use `st.markdown('<style>...</style>', unsafe_allow_html=True)` within the main app layout file to inject targeted CSS. Focus on adjusting margins, padding between charts and text, and font weights or sizes for `st.header`, `st.subheader`, and chart titles to create a clear visual flow.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Conduct a full visual review of the application on a standard desktop screen. Check for consistent spacing between elements, legible text, and a logical visual flow. Verify that headers are distinct from sub-headers and that chart labels are unambiguous."
           }
         ]
@@ -496,7 +496,7 @@
     ],
     "metadata": {
       "created": "2025-11-14T13:00:08.744Z",
-      "updated": "2025-11-23T08:12:39.833Z",
+      "updated": "2025-11-23T08:24:35.093Z",
       "description": "Tasks for master context"
     }
   }
