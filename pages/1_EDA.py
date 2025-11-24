@@ -87,12 +87,12 @@ def _render_champion_analysis(team_df: pd.DataFrame):
     with col1:
         st.markdown("### Most Picked")
         top_picks = stats.nlargest(10, "picks")[["champion", "picks", "wins", "losses"]]
-        st.dataframe(top_picks, use_container_width=True, hide_index=True)
+        st.dataframe(top_picks, width="stretch", hide_index=True)
 
     with col2:
         st.markdown("### Most Banned")
         top_bans = stats.nlargest(10, "bans")[["champion", "bans"]]
-        st.dataframe(top_bans, use_container_width=True, hide_index=True)
+        st.dataframe(top_bans, width="stretch", hide_index=True)
 
     # Filter for min games for rate stats
     min_games = 18
@@ -106,7 +106,7 @@ def _render_champion_analysis(team_df: pd.DataFrame):
             top_wins = rate_stats.nlargest(10, "win_rate")[["champion", "win_rate", "picks", "wins", "losses"]]
             # Format rate
             top_wins["win_rate"] = top_wins["win_rate"].map("{:.1f}%".format)
-            st.dataframe(top_wins, use_container_width=True, hide_index=True)
+            st.dataframe(top_wins, width="stretch", hide_index=True)
         else:
             st.info(f"No champions with >= {min_games} games.")
 
@@ -116,7 +116,7 @@ def _render_champion_analysis(team_df: pd.DataFrame):
             top_losses = rate_stats.nlargest(10, "loss_rate")[["champion", "loss_rate", "picks", "wins", "losses"]]
             # Format rate
             top_losses["loss_rate"] = top_losses["loss_rate"].map("{:.1f}%".format)
-            st.dataframe(top_losses, use_container_width=True, hide_index=True)
+            st.dataframe(top_losses, width="stretch", hide_index=True)
         else:
             st.info(f"No champions with >= {min_games} games.")
 

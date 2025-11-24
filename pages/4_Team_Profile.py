@@ -318,7 +318,7 @@ def render_page() -> pd.DataFrame:
     with st.expander("🔧 디버그 정보", expanded=False):
         if st.checkbox("팀 데이터 미리보기", value=False):
             st.write("Shape:", team_data.shape)
-            st.dataframe(team_data.head())
+            st.dataframe(team_data.head(), width="stretch")
             st.write("Available columns:", list(team_data.columns))
     
     return filtered_df

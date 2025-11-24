@@ -169,7 +169,7 @@ def render_page() -> pd.DataFrame:
     with st.expander("🔧 디버그 정보", expanded=False):
         if st.checkbox("필터링된 데이터 미리보기", value=False):
             st.write("Shape:", filtered_df.shape)
-            st.dataframe(filtered_df.head())
+            st.dataframe(filtered_df.head(), width="stretch")
 
     return filtered_df
 

@@ -381,12 +381,12 @@ def render_page() -> pd.DataFrame:
                     st.write(f"**{team_a} 통계:**")
                     st.json(stats_a)
                     st.write("**샘플 데이터:**")
-                    st.dataframe(team_a_data.head(3))
+                    st.dataframe(team_a_data.head(3), width="stretch")
                 with debug_col2:
                     st.write(f"**{team_b} 통계:**")
                     st.json(stats_b)
                     st.write("**샘플 데이터:**")
-                    st.dataframe(team_b_data.head(3))
+                    st.dataframe(team_b_data.head(3), width="stretch")
     
     return filtered_df
 

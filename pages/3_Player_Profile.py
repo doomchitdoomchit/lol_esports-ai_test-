@@ -263,7 +263,7 @@ def render_page() -> pd.DataFrame:
     with st.expander("🔧 디버그 정보", expanded=False):
         if st.checkbox("플레이어 데이터 미리보기", value=False):
             st.write("Shape:", player_data.shape)
-            st.dataframe(player_data.head())
+            st.dataframe(player_data.head(), width="stretch")
     
     return filtered_df
 
