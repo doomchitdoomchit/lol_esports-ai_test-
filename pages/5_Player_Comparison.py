@@ -14,6 +14,8 @@ from components.sidebar import render_sidebar_filters
 from config.colors import CHART_COLORS
 from data_loader import load_data
 
+st.set_page_config(layout="wide")
+
 
 
 

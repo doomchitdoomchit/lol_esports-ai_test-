@@ -12,6 +12,8 @@ from components.sidebar import render_sidebar_filters
 from config.colors import CHART_COLORS, COLOR_DISCRETE_MAP
 from data_loader import load_data
 
+st.set_page_config(layout="wide")
+
 
 def _get_active_filters(df_players) -> Dict[str, Any]:
     # Render sidebar and get filters directly
