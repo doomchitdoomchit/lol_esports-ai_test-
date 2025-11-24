@@ -8,18 +8,14 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from components.sidebar import render_sidebar_filters
 from config.colors import CHART_COLORS, COLOR_DISCRETE_MAP
 from data_loader import load_data
 
 
-def _get_active_filters() -> Dict[str, Any]:
-    filters = st.session_state.get("filters")
-    if not filters:
-        st.warning(
-            "Global filters are not initialized yet. Showing unfiltered results."
-        )
-        return {}
-    return filters
+def _get_active_filters(df_players) -> Dict[str, Any]:
+    # Render sidebar and get filters directly
+    return render_sidebar_filters(df_players)
 
 
 def _apply_filters(df, filters: Dict[str, Any]):
@@ -104,7 +100,7 @@ def render_page():
     st.header("Exploratory Data Analysis")
 
     df_players, _ = load_data()
-    filters = _get_active_filters()
+    filters = _get_active_filters(df_players)
     filtered_df = _apply_filters(df_players, filters)
 
     st.caption("글로벌 필터에 맞춰 플레이어 데이터를 슬라이싱했습니다.")

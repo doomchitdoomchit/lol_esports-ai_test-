@@ -9,16 +9,12 @@ import plotly.express as px
 import streamlit as st
 
 from components.charts import create_radar_chart
+from components.sidebar import render_sidebar_filters
 from config.colors import CHART_COLORS
 from data_loader import load_data
 
 
-def _get_active_filters() -> Dict[str, Any]:
-    filters = st.session_state.get("filters")
-    if not filters:
-        st.warning("Global filters are not initialized yet. Showing unfiltered data.")
-        return {}
-    return filters
+
 
 
 def _apply_filters(df: pd.DataFrame, filters: Dict[str, Any]) -> pd.DataFrame:
@@ -35,7 +31,7 @@ def _apply_filters(df: pd.DataFrame, filters: Dict[str, Any]) -> pd.DataFrame:
 
 def _load_filtered_teams() -> pd.DataFrame:
     _, df_teams = load_data()
-    filters = _get_active_filters()
+    filters = render_sidebar_filters(df_teams)
     return _apply_filters(df_teams, filters)
 
 
