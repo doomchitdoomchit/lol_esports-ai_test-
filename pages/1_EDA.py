@@ -30,107 +30,192 @@ def _apply_filters(df, filters: Dict[str, Any]):
     return filtered_df
 
 
-def _summaries(filtered_df):
-    col1, col2, col3 = st.columns(3)
+def _process_champion_stats(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate champion picks, bans, wins, and losses."""
+    if df.empty:
+        return pd.DataFrame()
 
-    total_games = len(filtered_df)
-    col1.metric("Total Games", f"{total_games:,}")
+    # Process Picks
+    pick_cols = [f"pick{i}" for i in range(1, 6)]
+    # Subset to avoid conflict with existing 'champion' column
+    picks = df[["result"] + pick_cols].melt(id_vars=["result"], value_vars=pick_cols, value_name="champion").dropna(subset=["champion"])
+    
+    # Calculate Pick Stats
+    pick_stats = picks.groupby("champion").agg(
+        picks=("champion", "count"),
+        wins=("result", "sum")
+    ).reset_index()
+    pick_stats["losses"] = pick_stats["picks"] - pick_stats["wins"]
 
-    if "playerid" in filtered_df.columns:
-        unique_players = filtered_df["playerid"].nunique()
-    else:
-        unique_players = 0
-        st.warning("'playerid' column missing; unable to compute unique players.")
-    col2.metric("Unique Players", f"{unique_players:,}")
+    # Process Bans
+    ban_cols = [f"ban{i}" for i in range(1, 6)]
+    # Subset to avoid conflict
+    bans = df[ban_cols].melt(value_vars=ban_cols, value_name="champion").dropna(subset=["champion"])
+    ban_stats = bans["champion"].value_counts().reset_index()
+    ban_stats.columns = ["champion", "bans"]
 
-    win_rate_display = "0%"
-    if total_games > 0 and "result" in filtered_df.columns:
-        wins = pd.to_numeric(filtered_df["result"], errors="coerce")
-        valid = wins.dropna()
-        if not valid.empty:
-            win_rate = valid.mean()
-            win_rate_display = f"{win_rate:.1%}"
-    elif "result" not in filtered_df.columns:
-        st.warning("'result' column missing; unable to compute win rate.")
-    col3.metric("Overall Win Rate", win_rate_display)
+    # Merge Stats
+    stats = pd.merge(pick_stats, ban_stats, on="champion", how="outer").fillna(0)
+    stats["picks"] = stats["picks"].astype(int)
+    stats["wins"] = stats["wins"].astype(int)
+    stats["losses"] = stats["losses"].astype(int)
+    stats["bans"] = stats["bans"].astype(int)
+    stats["total_games"] = stats["picks"] + stats["bans"]
+    
+    # Calculate Rates
+    stats["win_rate"] = (stats["wins"] / stats["picks"] * 100).fillna(0)
+    stats["loss_rate"] = (stats["losses"] / stats["picks"] * 100).fillna(0)
+    
+    return stats
 
 
-def _win_loss_chart(filtered_df):
-    st.subheader("Win/Loss Distribution")
-    if filtered_df.empty:
-        st.info("선택된 필터에 해당하는 경기가 없습니다.")
+def _render_champion_analysis(team_df: pd.DataFrame):
+    st.subheader("Champion Analysis (Team Data)")
+    
+    if team_df.empty:
+        st.warning("No team data found.")
         return
-    if "result" not in filtered_df.columns:
-        st.warning("'result' column missing; unable to render distribution.")
+
+    stats = _process_champion_stats(team_df)
+    if stats.empty:
+        st.warning("No champion statistics could be calculated.")
         return
 
-    results = pd.to_numeric(filtered_df["result"], errors="coerce").dropna()
-    if results.empty:
-        st.info("결과 데이터를 해석할 수 없어 차트를 표시할 수 없습니다.")
+    # Top Lists
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### Most Picked")
+        top_picks = stats.nlargest(10, "picks")[["champion", "picks", "wins", "losses"]]
+        st.dataframe(top_picks, use_container_width=True, hide_index=True)
+
+    with col2:
+        st.markdown("### Most Banned")
+        top_bans = stats.nlargest(10, "bans")[["champion", "bans"]]
+        st.dataframe(top_bans, use_container_width=True, hide_index=True)
+
+    # Filter for min games for rate stats
+    min_games = 18
+    rate_stats = stats[stats["picks"] >= min_games]
+
+    col3, col4 = st.columns(2)
+
+    with col3:
+        st.markdown(f"### Highest Win Rate (Min {min_games} Games)")
+        if not rate_stats.empty:
+            top_wins = rate_stats.nlargest(10, "win_rate")[["champion", "win_rate", "picks", "wins", "losses"]]
+            # Format rate
+            top_wins["win_rate"] = top_wins["win_rate"].map("{:.1f}%".format)
+            st.dataframe(top_wins, use_container_width=True, hide_index=True)
+        else:
+            st.info(f"No champions with >= {min_games} games.")
+
+    with col4:
+        st.markdown(f"### Highest Loss Rate (Min {min_games} Games)")
+        if not rate_stats.empty:
+            top_losses = rate_stats.nlargest(10, "loss_rate")[["champion", "loss_rate", "picks", "wins", "losses"]]
+            # Format rate
+            top_losses["loss_rate"] = top_losses["loss_rate"].map("{:.1f}%".format)
+            st.dataframe(top_losses, use_container_width=True, hide_index=True)
+        else:
+            st.info(f"No champions with >= {min_games} games.")
+
+
+def _render_game_analysis(team_df: pd.DataFrame):
+    st.subheader("Game Analysis (Team Data)")
+    
+    if team_df.empty:
         return
 
-    label_map = {1: "Win", 0: "Loss"}
-    counts = results.value_counts().rename(index=label_map)
-    chart_df = counts.reset_index()
-    chart_df.columns = ["Result", "Count"]
+    # Side Win Rate
+    if "side" in team_df.columns and "result" in team_df.columns:
+        st.markdown("### Side Win Rate")
+        side_wins = team_df.groupby("side")["result"].mean().reset_index()
+        side_wins["result"] = side_wins["result"] * 100
+        
+        fig_side = px.pie(
+            side_wins, 
+            names="side", 
+            values="result", 
+            color="side",
+            title="Win Rate by Side (%)",
+            color_discrete_map={"Blue": CHART_COLORS.get("blue_side", "blue"), "Red": CHART_COLORS.get("red_side", "red")},
+            hole=0.4
+        )
+        fig_side.update_traces(textposition='inside', textinfo='percent+label', texttemplate='%{label}<br>%{percent:.2%}')
+        st.plotly_chart(fig_side, use_container_width=True)
 
-    fig = px.pie(
-        chart_df,
-        names="Result",
-        values="Count",
-        hole=0.35,
-        color="Result",
-        color_discrete_map=COLOR_DISCRETE_MAP["win_loss"],
-    )
-    fig.update_layout(legend_title_text="", margin=dict(t=20, b=10))
-    st.plotly_chart(fig, use_container_width=True)
+    col1, col2 = st.columns(2)
 
+    # Game Duration
+    with col1:
+        if "gamelength" in team_df.columns:
+            st.markdown("### Game Duration Distribution")
+            # Convert seconds to minutes for better readability
+            durations = team_df["gamelength"] / 60
+            fig_duration = px.histogram(
+                durations, 
+                nbins=20, 
+                title="Game Duration (Minutes)",
+                labels={"value": "Minutes"},
+                color_discrete_sequence=[CHART_COLORS.get("primary", "blue")]
+            )
+            fig_duration.update_layout(showlegend=False)
+            st.plotly_chart(fig_duration, use_container_width=True)
 
-def _data_preview(filtered_df):
-    st.subheader("Data Preview")
-    if filtered_df.empty:
-        st.info("표시할 행이 없습니다. 필터를 조정해 보세요.")
-        return
-    st.dataframe(filtered_df.head(20), use_container_width=True)
-    st.caption(f"Showing up to 20 of {len(filtered_df):,} rows.")
-    # TODO: add download button for filtered dataset if needed
+    # First Objectives Win Rate
+    with col2:
+        st.markdown("### First Objective Win Rates")
+        objectives = ["firstblood", "firstdragon", "firstbaron", "firsttower", "firstherald"]
+        obj_data = []
+        
+        for obj in objectives:
+            if obj in team_df.columns and "result" in team_df.columns:
+                # Calculate win rate when securing the objective (value == 1)
+                subset = team_df[team_df[obj] == 1]
+                if not subset.empty:
+                    win_rate = subset["result"].mean() * 100
+                    obj_data.append({"Objective": obj, "Win Rate": win_rate})
+        
+        if obj_data:
+            obj_df = pd.DataFrame(obj_data)
+            fig_obj = px.bar(
+                obj_df,
+                x="Objective",
+                y="Win Rate",
+                title="Win Rate when Securing First Objective (%)",
+                color="Win Rate",
+                color_continuous_scale="Viridis"
+            )
+            st.plotly_chart(fig_obj, use_container_width=True)
 
 
 def render_page():
     st.header("Exploratory Data Analysis")
 
-    df_players, _ = load_data()
+    df_players, df_teams = load_data()
+    
+    # Apply filters to both datasets
     filters = _get_active_filters(df_players)
-    filtered_df = _apply_filters(df_players, filters)
+    filtered_teams = _apply_filters(df_teams, filters)
 
-    st.caption("글로벌 필터에 맞춰 플레이어 데이터를 슬라이싱했습니다.")
+    st.caption("Global filters applied. Analysis based on Team Data.")
     
-    # Summary metrics in a container
-    with st.container():
-        _summaries(filtered_df)
-    
+    if filtered_teams.empty:
+        st.warning("No data available with current filters.")
+        return
+
+    _render_champion_analysis(filtered_teams)
     st.divider()
-    
-    # Charts in a two-column layout
-    with st.container():
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            _win_loss_chart(filtered_df)
-        
-        with col2:
-            # Data preview moved to expander
-            with st.expander("📊 데이터 프리뷰", expanded=False):
-                _data_preview(filtered_df)
-    
-    # Debug section in expander
-    with st.expander("🔧 디버그 정보", expanded=False):
-        if st.checkbox("필터 상태 보기", value=False):
-            st.json(filters)
-            st.write("Filtered shape:", filtered_df.shape)
+    _render_game_analysis(filtered_teams)
 
-    return filtered_df
+    # Debug section in expander
+    with st.expander("🔧 Debug Info", expanded=False):
+        if st.checkbox("Show Filter State", value=False):
+            st.json(filters)
+            st.write("Filtered Teams shape:", filtered_teams.shape)
+
+    return filtered_teams
 
 
 filtered_players_df = render_page()
-
