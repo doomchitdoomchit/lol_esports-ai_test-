@@ -41,36 +41,31 @@ def _get_team_metrics(team_data: pd.DataFrame) -> Dict[str, float]:
     """Extract and calculate average metrics for a team."""
     metrics = {}
     
-    # Check for team-level KDA calculation
-    # Teams might have teamkills, teamdeaths columns
-    kills_col = None
-    deaths_col = None
-    assists_col = None
+    # Basic averages
+    metrics["Games"] = len(team_data)
     
-    for col in team_data.columns:
-        col_lower = col.lower()
-        if "teamkill" in col_lower or (col_lower == "kills" and "team" in team_data.columns[0].lower()):
-            kills_col = col
-        elif "teamdeath" in col_lower or (col_lower == "deaths" and "team" in team_data.columns[0].lower()):
-            deaths_col = col
-        elif "teamassist" in col_lower or (col_lower == "assists" and "team" in team_data.columns[0].lower()):
-            assists_col = col
+    if "result" in team_data.columns:
+        metrics["Win Rate"] = team_data["result"].mean() * 100
     
-    # Calculate team KDA if possible
-    if kills_col and deaths_col:
-        kills = pd.to_numeric(team_data[kills_col], errors="coerce")
-        deaths = pd.to_numeric(team_data[deaths_col], errors="coerce").replace(0, 1)
-        assists = pd.to_numeric(team_data[assists_col], errors="coerce") if assists_col else 0
+    # KDA - Calculate as (Sum Kills + Sum Assists) / Sum Deaths
+    # We use case-insensitive lookup for safety
+    kills_col = next((c for c in team_data.columns if c.lower() == "kills"), None)
+    deaths_col = next((c for c in team_data.columns if c.lower() == "deaths"), None)
+    assists_col = next((c for c in team_data.columns if c.lower() == "assists"), None)
+
+    if kills_col and deaths_col and assists_col:
+        t_kills = pd.to_numeric(team_data[kills_col], errors="coerce").sum()
+        t_deaths = pd.to_numeric(team_data[deaths_col], errors="coerce").sum()
+        t_assists = pd.to_numeric(team_data[assists_col], errors="coerce").sum()
         
-        if not assists_col:
-            kda = (kills / deaths).mean()
-        else:
-            kda = ((kills + assists) / deaths).mean()
-        metrics["KDA"] = kda if not pd.isna(kda) else 0.0
+        metrics["KDA"] = (t_kills + t_assists) / t_deaths if t_deaths > 0 else 0.0
     elif "KDA" in team_data.columns:
+        # Fallback to average if raw columns missing
         metrics["KDA"] = pd.to_numeric(team_data["KDA"], errors="coerce").mean()
+    else:
+        metrics["KDA"] = 0.0
     
-    # DPM - Damage Per Minute (team level)
+    # DPM
     dpm_col = None
     for col in team_data.columns:
         if col.lower() == "dpm" or "team" in col.lower() and "dpm" in col.lower():
@@ -79,155 +74,362 @@ def _get_team_metrics(team_data: pd.DataFrame) -> Dict[str, float]:
     if dpm_col:
         metrics["DPM"] = pd.to_numeric(team_data[dpm_col], errors="coerce").mean()
     
-    # GPM - Gold Per Minute (team level)
+    # Earned GPM
     gpm_col = None
     for col in team_data.columns:
-        if "gpm" in col.lower():
+        if "earned gpm" in col.lower():
             gpm_col = col
             break
     if gpm_col:
-        metrics["GPM"] = pd.to_numeric(team_data[gpm_col], errors="coerce").mean()
+        metrics["Earned GPM"] = pd.to_numeric(team_data[gpm_col], errors="coerce").mean()
     
-    # VSPM - Vision Score Per Minute (team level)
+    # VSPM
     vspm_col = None
     for col in team_data.columns:
-        if col.lower() == "vspm" or ("team" in col.lower() and "vspm" in col.lower()):
+        if col.lower() == "vspm":
             vspm_col = col
             break
     if vspm_col:
         metrics["VSPM"] = pd.to_numeric(team_data[vspm_col], errors="coerce").mean()
-    
-    # Fill missing values with 0
-    for key in ["KDA", "DPM", "GPM", "VSPM"]:
-        if key not in metrics or pd.isna(metrics[key]):
-            metrics[key] = 0.0
-    
+
+    # Objectives (Mean)
+    for col, name in [
+        ("inhibitors", "Inhibitors"),
+        ("towers", "Towers"),
+        ("dragons", "Dragons"),
+        ("barons", "Barons"),
+        ("void_grubs", "Void Grubs"),
+    ]:
+        if col in team_data.columns:
+            metrics[name] = pd.to_numeric(team_data[col], errors="coerce").mean()
+
+    # First Objectives (%)
+    for col, name in [
+        ("firstblood", "First Blood"),
+        ("firsttower", "First Tower"),
+        ("firstdragon", "First Dragon"),
+        ("firstbaron", "First Baron"),
+        ("atakhans", "Atakhans"), # Assuming atakhans is a binary/count column where mean represents rate
+    ]:
+        if col in team_data.columns:
+             metrics[name] = pd.to_numeric(team_data[col], errors="coerce").mean() * 100
+
     return metrics
 
 
-def _create_radar_chart_for_team(team_data: pd.DataFrame, team_name: str):
-    """Create a radar chart for team performance metrics."""
-    if team_data.empty:
-        st.info("팀 데이터가 없어 레이더 차트를 생성할 수 없습니다.")
-        return None
-    
-    metrics = _get_team_metrics(team_data)
-    
-    if not metrics or all(v == 0.0 for v in metrics.values()):
-        st.warning("표시할 성능 지표가 없습니다.")
-        return None
-    
-    radar_fig = create_radar_chart(
-        metrics,
-        title=f"{team_name} 성능 지표",
-        trace_color=CHART_COLORS["team_profile"]
-    )
-    return radar_fig
+def _get_league_metrics(df_teams: pd.DataFrame) -> Dict[str, float]:
+    """Calculate league-wide average metrics."""
+    return _get_team_metrics(df_teams)
 
 
-def _create_trend_line(team_data: pd.DataFrame, team_name: str, metric: str = "KDA"):
-    """Create a trend line chart showing metric over time (Patch)."""
-    if team_data.empty:
-        st.info("팀 데이터가 없어 트렌드 차트를 생성할 수 없습니다.")
-        return None
+def _create_normalized_radar_chart(team_data: pd.DataFrame, league_data: pd.DataFrame, team_name: str):
+    """Create a normalized radar chart comparing team to league."""
     
-    # Determine metric column
-    metric_col = None
-    if metric == "KDA":
-        # Try to find or calculate KDA
-        if "KDA" in team_data.columns:
-            metric_col = "KDA"
-        else:
-            # Try to calculate from team kills/deaths
-            kills_col = None
-            deaths_col = None
-            assists_col = None
+    metrics_to_plot = {
+        "DPM": "dpm",
+        "Earned GPM": "earned gpm", 
+        "KDA": "KDA",
+        "VSPM": "vspm"
+    }
+    
+    team_vals = {}
+    league_vals = {}
+    max_vals = {}
+    min_vals = {}
+    
+    # Calculate averages and find min/max for normalization
+    # First, aggregate league data by team to get team-level averages for min/max
+    # This ensures we compare "Team Avg" vs "Best/Worst Team Avg", not "Best/Worst Game"
+    team_name_col = next((col for col in league_data.columns if "teamname" in col.lower() or "team" in col.lower() and "name" in col.lower()), None)
+    
+    league_team_means = pd.DataFrame()
+    if team_name_col:
+        # We only care about the numeric columns we are plotting
+        cols_to_agg = []
+        for col_key in metrics_to_plot.values():
+             for col in league_data.columns:
+                if col_key.lower() == col.lower() or (col_key.lower() in col.lower() and len(col) < len(col_key) + 5):
+                     cols_to_agg.append(col)
+                     break
+        
+        if cols_to_agg:
+             # Group by team and calculate mean for relevant columns
+             league_team_means = league_data.groupby(team_name_col)[cols_to_agg].mean()
+
+    for label, col_key in metrics_to_plot.items():
+        # Special handling for KDA to ensure (kills + assists) / deaths
+        if label == "KDA":
+            # Calculate Team KDA
+            t_kills = pd.to_numeric(team_data.get("kills", 0), errors="coerce").sum()
+            t_deaths = pd.to_numeric(team_data.get("deaths", 0), errors="coerce").replace(0, 1).sum()
+            t_assists = pd.to_numeric(team_data.get("assists", 0), errors="coerce").sum()
+            team_mean = (t_kills + t_assists) / t_deaths if t_deaths > 0 else 0
             
-            for col in team_data.columns:
-                col_lower = col.lower()
-                if "teamkill" in col_lower:
-                    kills_col = col
-                elif "teamdeath" in col_lower:
-                    deaths_col = col
-                elif "teamassist" in col_lower:
-                    assists_col = col
+            # Calculate League KDA (Macro average of all games)
+            l_kills = pd.to_numeric(league_data.get("kills", 0), errors="coerce").sum()
+            l_deaths = pd.to_numeric(league_data.get("deaths", 0), errors="coerce").replace(0, 1).sum()
+            l_assists = pd.to_numeric(league_data.get("assists", 0), errors="coerce").sum()
+            league_mean = (l_kills + l_assists) / l_deaths if l_deaths > 0 else 0
             
-            if kills_col and deaths_col:
-                kills = pd.to_numeric(team_data[kills_col], errors="coerce")
-                deaths = pd.to_numeric(team_data[deaths_col], errors="coerce").replace(0, 1)
-                assists = pd.to_numeric(team_data[assists_col], errors="coerce") if assists_col else 0
+            # For min/max, we calculate KDA for EACH TEAM and take min/max of those averages
+            if team_name_col:
+                # Calculate KDA per team
+                team_kdas = []
+                for team in league_data[team_name_col].unique():
+                    td = league_data[league_data[team_name_col] == team]
+                    tk = pd.to_numeric(td.get("kills", 0), errors="coerce").sum()
+                    t_d = pd.to_numeric(td.get("deaths", 0), errors="coerce").replace(0, 1).sum()
+                    ta = pd.to_numeric(td.get("assists", 0), errors="coerce").sum()
+                    team_kdas.append((tk + ta) / t_d)
                 
-                if assists_col:
-                    team_data = team_data.copy()
-                    team_data["KDA"] = (kills + assists) / deaths
-                else:
-                    team_data = team_data.copy()
-                    team_data["KDA"] = kills / deaths
-                metric_col = "KDA"
-    elif metric == "DPM":
-        for col in team_data.columns:
-            if col.lower() == "dpm":
-                metric_col = col
-                break
-    elif metric == "GPM":
-        for col in team_data.columns:
-            if "gpm" in col.lower():
-                metric_col = col
-                break
-    elif metric == "VSPM":
-        for col in team_data.columns:
-            if col.lower() == "vspm":
-                metric_col = col
-                break
-    
-    if metric_col is None or metric_col not in team_data.columns:
-        st.warning(f"{metric} 메트릭을 찾을 수 없습니다.")
+                league_max = max(team_kdas) if team_kdas else league_mean * 2
+                league_min = min(team_kdas) if team_kdas else 0
+            else:
+                league_max = league_mean * 2
+                league_min = 0
+                
+        else:
+            # Find actual column name for other metrics
+            col_name = None
+            for col in team_data.columns:
+                if col_key.lower() == col.lower() or (col_key.lower() in col.lower() and len(col) < len(col_key) + 5):
+                     col_name = col
+                     break
+            
+            if not col_name:
+                continue
+                
+            team_mean = pd.to_numeric(team_data[col_name], errors="coerce").mean()
+            league_mean = pd.to_numeric(league_data[col_name], errors="coerce").mean()
+            
+            # Use pre-calculated team means for min/max if available
+            if not league_team_means.empty and col_name in league_team_means.columns:
+                league_max = league_team_means[col_name].max()
+                league_min = league_team_means[col_name].min()
+            else:
+                # Fallback to game-level min/max (less ideal)
+                league_max = pd.to_numeric(league_data[col_name], errors="coerce").max()
+                league_min = pd.to_numeric(league_data[col_name], errors="coerce").min()
+        
+        team_vals[label] = team_mean
+        league_vals[label] = league_mean
+        max_vals[label] = league_max
+        min_vals[label] = league_min
+
+    if not team_vals:
+        st.warning("레이더 차트를 위한 데이터가 부족합니다.")
         return None
+
+    # Normalize
+    categories = list(team_vals.keys())
+    team_norm = []
+    league_norm = []
     
-    # Get Patch column for x-axis
-    patch_col = None
-    for col in team_data.columns:
-        if col.lower() == "patch":
-            patch_col = col
-            break
+    for cat in categories:
+        mn = min_vals[cat]
+        mx = max_vals[cat]
+        if mx == mn:
+            team_norm.append(0.5)
+            league_norm.append(0.5)
+        else:
+            team_norm.append((team_vals[cat] - mn) / (mx - mn))
+            league_norm.append((league_vals[cat] - mn) / (mx - mn))
+            
+    import plotly.graph_objects as go
     
-    if patch_col is None:
-        st.warning("Patch 컬럼을 찾을 수 없습니다.")
-        return None
+    fig = go.Figure()
     
-    # Prepare data for trend line
-    trend_df = team_data[[patch_col, metric_col]].copy()
-    trend_df[metric_col] = pd.to_numeric(trend_df[metric_col], errors="coerce")
-    trend_df = trend_df.dropna(subset=[patch_col, metric_col])
+    # League Average
+    fig.add_trace(go.Scatterpolar(
+        r=league_norm,
+        theta=categories,
+        fill='toself',
+        name='League Avg',
+        hoverinfo='text',
+        text=[f"{v:.2f}" for v in league_vals.values()],
+        line=dict(color='gray', dash='dash')
+    ))
     
-    if trend_df.empty:
-        st.info("트렌드 차트를 그릴 데이터가 없습니다.")
-        return None
+    # Team
+    fig.add_trace(go.Scatterpolar(
+        r=team_norm,
+        theta=categories,
+        fill='toself',
+        name=team_name,
+        hoverinfo='text',
+        text=[f"{v:.2f}" for v in team_vals.values()],
+        line=dict(color=CHART_COLORS["team_profile"])
+    ))
     
-    # Sort by patch for proper trend visualization
-    try:
-        trend_df = trend_df.sort_values(by=patch_col)
-    except Exception:
-        # If sorting fails, just use the data as-is
-        pass
-    
-    # Group by patch and calculate mean for cleaner trend
-    trend_agg = trend_df.groupby(patch_col)[metric_col].mean().reset_index()
-    
-    fig = px.line(
-        trend_agg,
-        x=patch_col,
-        y=metric_col,
-        title=f"{team_name} {metric} 트렌드",
-        markers=True
-    )
     fig.update_layout(
-        xaxis_title="Patch",
-        yaxis_title=metric,
-        hovermode="x unified"
+        polar=dict(
+            radialaxis=dict(
+                visible=False,
+                range=[0, 1]
+            )
+        ),
+        showlegend=True,
+        title=f"{team_name} vs League Performance (Normalized)"
     )
     
     return fig
+
+def _create_laning_phase_charts(team_data: pd.DataFrame, league_data: pd.DataFrame):
+    """Create charts for laning phase indicators (Gold/CS Diff)."""
+    
+    time_points = [10, 15, 20, 25]
+    
+    # Gold Diff
+    gold_diff_cols = [f"golddiffat{t}" for t in time_points]
+    cs_diff_cols = [f"csdiffat{t}" for t in time_points]
+    
+    team_gold_diff = []
+    league_abs_gold_diff = []
+    
+    team_cs_diff = []
+    league_abs_cs_diff = []
+    
+    valid_times = []
+    
+    for i, t in enumerate(time_points):
+        g_col = gold_diff_cols[i]
+        c_col = cs_diff_cols[i]
+        
+        if g_col in team_data.columns and c_col in team_data.columns:
+            valid_times.append(t)
+            
+            # Team Average (Signed)
+            team_gold_diff.append(pd.to_numeric(team_data[g_col], errors="coerce").mean())
+            team_cs_diff.append(pd.to_numeric(team_data[c_col], errors="coerce").mean())
+            
+            # League Absolute Average (Adjusted: sum(abs) / (2 * len))
+            l_gold_vals = pd.to_numeric(league_data[g_col], errors="coerce")
+            l_cs_vals = pd.to_numeric(league_data[c_col], errors="coerce")
+            
+            league_abs_gold_diff.append(l_gold_vals.abs().sum() / (2 * len(l_gold_vals)))
+            league_abs_cs_diff.append(l_cs_vals.abs().sum() / (2 * len(l_cs_vals)))
+            
+    if not valid_times:
+        st.info("라인전 지표 데이터가 없습니다.")
+        return
+
+    # Create DataFrames for Plotly
+    df_gold = pd.DataFrame({
+        "Time": valid_times,
+        "Team Gold Diff": team_gold_diff,
+        "League Avg Diff (Adj)": league_abs_gold_diff
+    })
+    
+    df_cs = pd.DataFrame({
+        "Time": valid_times,
+        "Team CS Diff": team_cs_diff,
+        "League Avg Diff (Adj)": league_abs_cs_diff
+    })
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("평균 골드 격차")
+        fig_gold = px.line(df_gold, x="Time", y=["Team Gold Diff", "League Avg Diff (Adj)"], markers=True)
+        fig_gold.update_layout(
+            yaxis_title="Gold Diff",
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01,
+                bgcolor="rgba(0,0,0,0)"
+            )
+        )
+        st.plotly_chart(fig_gold, use_container_width=True)
+        
+    with col2:
+        st.subheader("평균 CS 격차")
+        fig_cs = px.line(df_cs, x="Time", y=["Team CS Diff", "League Avg Diff (Adj)"], markers=True)
+        fig_cs.update_layout(
+            yaxis_title="CS Diff",
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01,
+                bgcolor="rgba(0,0,0,0)"
+            )
+        )
+        st.plotly_chart(fig_cs, use_container_width=True)
+
+
+def _calculate_object_win_rates(team_data: pd.DataFrame):
+    """Calculate win rates for first objectives and objective counts."""
+    
+    if "result" not in team_data.columns:
+        st.warning("승패 데이터(result)가 없어 승률을 계산할 수 없습니다.")
+        return
+
+    # 1. First Objectives Win Rate
+    first_objs = {
+        "First Blood": "firstblood",
+        "First Tower": "firsttower",
+        "First Dragon": "firstdragon",
+        "First Baron": "firstbaron"
+    }
+    
+    first_wr_data = {}
+    
+    for label, col in first_objs.items():
+        if col in team_data.columns:
+            # Filter games where team got the first objective (value == 1)
+            got_obj = team_data[team_data[col] == 1]
+            if not got_obj.empty:
+                wr = got_obj["result"].mean() * 100
+                first_wr_data[label] = wr
+            else:
+                first_wr_data[label] = 0.0
+    
+    # 2. Win Rate by Count (Voidgrubs, Dragon, Baron)
+    count_objs = {
+        "Void Grubs": "void_grubs",
+        "Dragons": "dragons",
+        "Barons": "barons"
+    }
+    
+    st.subheader("오브젝트 컨트롤 시 승률")
+    
+    # Display First Objectives WR
+    if first_wr_data:
+        cols = st.columns(len(first_wr_data))
+        for i, (label, wr) in enumerate(first_wr_data.items()):
+            cols[i].metric(f"{label} 획득 시 승률", f"{wr:.1f}%")
+            
+    st.divider()
+    
+    # Display Count-based WR
+    col1, col2, col3 = st.columns(3)
+    cols_map = [col1, col2, col3]
+    
+    for i, (label, col) in enumerate(count_objs.items()):
+        if col in team_data.columns:
+            # Ensure column is integer
+            team_data[col] = pd.to_numeric(team_data[col], errors='coerce').fillna(0).astype(int)
+            
+            # Group by count and calculate win rate
+            wr_by_count = team_data.groupby(col)["result"].agg(['mean', 'count']).reset_index()
+            wr_by_count.columns = [label, "Win Rate", "Games"]
+            wr_by_count["Win Rate"] = wr_by_count["Win Rate"] * 100
+            
+            with cols_map[i]:
+                st.write(f"**{label} 획득 수별 승률**")
+                st.dataframe(
+                    wr_by_count.style.format({"Win Rate": "{:.1f}%"}),
+                    hide_index=True,
+                    width="stretch"
+                )
+
+
+
+
+
+
 
 
 def render_page() -> pd.DataFrame:
@@ -280,41 +482,53 @@ def render_page() -> pd.DataFrame:
     
     # Display basic info in a container
     with st.container():
-        col1, col2, col3 = st.columns(3)
-        
-        total_games = len(team_data)
-        col1.metric("총 경기 수", f"{total_games}")
-        
-        if "result" in team_data.columns:
-            wins = pd.to_numeric(team_data["result"], errors="coerce")
-            win_count = wins.sum() if not wins.isna().all() else 0
-            win_rate = (win_count / total_games * 100) if total_games > 0 else 0
-            col2.metric("승률", f"{win_rate:.1f}%")
-        
-        # Calculate average team KDA for display
         team_metrics = _get_team_metrics(team_data)
-        avg_kda = team_metrics.get("KDA", 0.0)
-        col3.metric("평균 KDA", f"{avg_kda:.2f}")
+        
+        # Row 1: Basic Stats
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("총 경기 수", f"{int(team_metrics.get('Games', 0))}")
+        c2.metric("승률", f"{team_metrics.get('Win Rate', 0):.1f}%")
+        c3.metric("평균 KDA", f"{team_metrics.get('KDA', 0):.2f}")
+        c4.metric("평균 DPM", f"{team_metrics.get('DPM', 0):.0f}")
+        c5.metric("평균 Earned GPM", f"{team_metrics.get('Earned GPM', 0):.0f}")
+        
+        # Row 2: Objectives Mean
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Mean Inhibitors", f"{team_metrics.get('Inhibitors', 0):.1f}")
+        c2.metric("Mean Towers", f"{team_metrics.get('Towers', 0):.1f}")
+        c3.metric("Mean Dragons", f"{team_metrics.get('Dragons', 0):.1f}")
+        c4.metric("Mean Barons", f"{team_metrics.get('Barons', 0):.1f}")
+        c5.metric("Mean Void Grubs", f"{team_metrics.get('Void Grubs', 0):.1f}")
+
+        # Row 3: First Objectives & Atakhans
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("First Blood %", f"{team_metrics.get('First Blood', 0):.1f}%")
+        c2.metric("First Tower %", f"{team_metrics.get('First Tower', 0):.1f}%")
+        c3.metric("First Dragon %", f"{team_metrics.get('First Dragon', 0):.1f}%")
+        c4.metric("First Baron %", f"{team_metrics.get('First Baron', 0):.1f}%")
+        c5.metric("Atakhans %", f"{team_metrics.get('Atakhans', 0):.1f}%")
     
     st.divider()
     
-    # Create two-column layout for charts in a container
-    with st.container():
-        col1, col2 = st.columns(2)
-        
-        # Radar chart
-        with col1:
-            st.subheader("성능 지표 레이더 차트")
-            radar_fig = _create_radar_chart_for_team(team_data, selected_team)
-            if radar_fig:
-                st.plotly_chart(radar_fig, use_container_width=True)
-        
-        # Trend line chart
-        with col2:
-            st.subheader("KDA 트렌드")
-            trend_fig = _create_trend_line(team_data, selected_team, metric="KDA")
-            if trend_fig:
-                st.plotly_chart(trend_fig, use_container_width=True)
+    # Create two columns for Radar and Laning
+    col_radar, col_laning = st.columns([1, 2])
+    
+    with col_radar:
+        st.subheader("성능 지표 레이더")
+        st.caption("vs League (Normalized)")
+        radar_fig = _create_normalized_radar_chart(team_data, filtered_df, selected_team)
+        if radar_fig:
+            st.plotly_chart(radar_fig, use_container_width=True)
+            
+    with col_laning:
+        st.subheader("라인전 지표")
+        st.caption("vs League Avg Diff Adj (abs(sum)/2*len)")
+        _create_laning_phase_charts(team_data, filtered_df)
+    
+    st.divider()
+    
+    # Object Control Win Rates
+    _calculate_object_win_rates(team_data)
     
     # Debug section in expander
     with st.expander("🔧 디버그 정보", expanded=False):
