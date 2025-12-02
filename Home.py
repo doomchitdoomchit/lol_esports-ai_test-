@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Sequence, Tuple
 
 import streamlit as st
 
-from data_loader import load_data
+from components.data_loader import load_data
 
 st.set_page_config(page_title="LCK Analytics", layout="wide")
 

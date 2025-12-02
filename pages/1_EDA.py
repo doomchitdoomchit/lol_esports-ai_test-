@@ -10,7 +10,8 @@ import streamlit as st
 
 from components.sidebar import render_sidebar_filters
 from config.colors import CHART_COLORS, COLOR_DISCRETE_MAP
-from data_loader import load_data
+from components.data_loader import load_data
+from components.utils import apply_filters
 
 st.set_page_config(layout="wide")
 
@@ -20,16 +21,7 @@ def _get_active_filters(df_players) -> Dict[str, Any]:
     return render_sidebar_filters(df_players)
 
 
-def _apply_filters(df, filters: Dict[str, Any]):
-    filtered_df = df.copy()
-    for column, value in filters.items():
-        if value in (None, "", "All"):
-            continue
-        if column not in filtered_df.columns:
-            st.sidebar.warning(f"'{column}' 컬럼이 없어 필터를 건너뜀")
-            continue
-        filtered_df = filtered_df[filtered_df[column] == value]
-    return filtered_df
+
 
 
 def _process_champion_stats(df: pd.DataFrame) -> pd.DataFrame:
@@ -199,7 +191,7 @@ def render_page():
     
     # Apply filters to both datasets
     filters = _get_active_filters(df_players)
-    filtered_teams = _apply_filters(df_teams, filters)
+    filtered_teams = apply_filters(df_teams, filters)
 
     st.caption("Global filters applied. Analysis based on Team Data.")
     

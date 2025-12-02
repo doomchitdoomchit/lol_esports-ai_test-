@@ -9,7 +9,8 @@ import plotly.express as px
 import streamlit as st
 
 from components.sidebar import render_sidebar_filters
-from data_loader import load_data
+from components.data_loader import load_data
+from components.utils import apply_filters
 
 st.set_page_config(layout="wide")
 
@@ -17,22 +18,13 @@ st.set_page_config(layout="wide")
 
 
 
-def _apply_filters(df: pd.DataFrame, filters: Dict[str, Any]) -> pd.DataFrame:
-    filtered = df.copy()
-    for column, value in filters.items():
-        if value in (None, "", "All"):
-            continue
-        if column not in filtered.columns:
-            st.sidebar.warning(f"'{column}' 컬럼이 없어 필터를 건너뜀")
-            continue
-        filtered = filtered[filtered[column] == value]
-    return filtered
+
 
 
 def _load_filtered_players() -> pd.DataFrame:
     df_players, _ = load_data()
     filters = render_sidebar_filters(df_players)
-    return _apply_filters(df_players, filters)
+    return apply_filters(df_players, filters)
 
 
 def _calculate_champion_stats(filtered_df: pd.DataFrame) -> pd.DataFrame:

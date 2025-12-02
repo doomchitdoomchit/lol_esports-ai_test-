@@ -11,7 +11,8 @@ import streamlit as st
 from components.charts import create_radar_chart
 from components.sidebar import render_sidebar_filters
 from config.colors import CHART_COLORS
-from data_loader import load_data
+from components.data_loader import load_data
+from components.utils import apply_filters
 
 st.set_page_config(layout="wide")
 
@@ -19,22 +20,13 @@ st.set_page_config(layout="wide")
 
 
 
-def _apply_filters(df: pd.DataFrame, filters: Dict[str, Any]) -> pd.DataFrame:
-    filtered = df.copy()
-    for column, value in filters.items():
-        if value in (None, "", "All"):
-            continue
-        if column not in filtered.columns:
-            st.sidebar.warning(f"'{column}' 컬럼이 없어 필터를 건너뜀")
-            continue
-        filtered = filtered[filtered[column] == value]
-    return filtered
+
 
 
 def _load_filtered_teams() -> pd.DataFrame:
     _, df_teams = load_data()
     filters = render_sidebar_filters(df_teams)
-    return _apply_filters(df_teams, filters)
+    return apply_filters(df_teams, filters)
 
 
 def _get_team_metrics(team_data: pd.DataFrame) -> Dict[str, float]:
