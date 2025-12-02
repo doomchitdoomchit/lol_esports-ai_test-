@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
+import os
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from factor_analyzer import FactorAnalyzer
+from scipy.stats import percentileofscore
 
 from components.charts import create_radar_chart
 from components.sidebar import render_sidebar_filters
@@ -15,9 +20,6 @@ from config.colors import CHART_COLORS
 from data_loader import load_data
 
 st.set_page_config(layout="wide")
-
-
-
 
 
 def _apply_filters(df: pd.DataFrame, filters: Dict[str, Any]) -> pd.DataFrame:
@@ -46,364 +48,338 @@ def _get_player_id_column(df: pd.DataFrame) -> str | None:
     return None
 
 
-def _get_player_metrics(player_data: pd.DataFrame) -> Dict[str, float]:
-    """Extract and calculate average metrics for a player."""
-    metrics = {}
+def _load_cluster_info() -> pd.DataFrame:
+    """Load cluster definitions from csv."""
+    file_path = os.path.join("data", "val.csv")
+    if not os.path.exists(file_path):
+        st.error(f"Cluster data not found at {file_path}")
+        return pd.DataFrame()
     
-    # KDA is already computed in data_loader
-    if "KDA" in player_data.columns:
-        metrics["KDA"] = pd.to_numeric(player_data["KDA"], errors="coerce").mean()
+    try:
+        df = pd.read_csv(file_path)
+        if len(df.columns) >= 2:
+            df.columns = ['variable', 'cluster_label'] + list(df.columns[2:])
+            df['cluster'] = df['cluster_label'].astype(str).str.extract(r'(\d+)').astype(float)
+            return df
+    except Exception as e:
+        st.error(f"Error loading cluster data: {e}")
+        return pd.DataFrame()
     
-    # DPM - Damage Per Minute
-    dpm_col = None
-    for col in player_data.columns:
-        if col.lower() == "dpm":
-            dpm_col = col
-            break
-    if dpm_col:
-        metrics["DPM"] = pd.to_numeric(player_data[dpm_col], errors="coerce").mean()
-    
-    # GPM - Gold Per Minute
-    gpm_col = None
-    for col in player_data.columns:
-        if "gpm" in col.lower():
-            gpm_col = col
-            break
-    if gpm_col:
-        metrics["GPM"] = pd.to_numeric(player_data[gpm_col], errors="coerce").mean()
-    
-    # VSPM - Vision Score Per Minute
-    vspm_col = None
-    for col in player_data.columns:
-        if col.lower() == "vspm":
-            vspm_col = col
-            break
-    if vspm_col:
-        metrics["VSPM"] = pd.to_numeric(player_data[vspm_col], errors="coerce").mean()
-    
-    # Fill missing values with 0
-    for key in ["KDA", "DPM", "GPM", "VSPM"]:
-        if key not in metrics or pd.isna(metrics[key]):
-            metrics[key] = 0.0
-    
-    return metrics
+    return df
 
 
-def _create_overlaid_radar_chart(
-    stats_a: Dict[str, float],
-    stats_b: Dict[str, float],
-    player_a_name: str,
-    player_b_name: str,
-    title: str = "플레이어 성능 비교"
-) -> go.Figure:
-    """Create an overlaid radar chart comparing two players."""
-    # Get all unique categories from both stats
-    categories = list(set(list(stats_a.keys()) + list(stats_b.keys())))
+def _calculate_factor_scores(player_name: str, position: str, full_data: pd.DataFrame) -> Dict[str, Dict[str, Any]]:
+    """Calculate Factor scores for the player based on clusters."""
+    cluster_df = _load_cluster_info()
+    if cluster_df.empty:
+        return {}
+
+    # Filter data for the same position
+    position_data = full_data[full_data['position'] == position].reset_index(drop=True).copy()
+
+    # Get player's position
+    player_row = position_data[position_data['playername'] == player_name]
+    if player_row.empty:
+        return {}
     
-    # Prepare values for both players
-    values_a = [stats_a.get(cat, 0.0) for cat in categories]
-    values_b = [stats_b.get(cat, 0.0) for cat in categories]
+    if len(position_data) < 3:
+        return {}
+
+    # Short Cluster Names
+    cluster_names = {
+        1: '성장',
+        2: '후반',
+        3: '팀파이트',
+        4: '라인전',
+        5: '사망',
+        6: '방어',
+        7: '공격',
+        8: '전투우위'
+    }
     
-    # Calculate max value for proper scaling
-    all_values = values_a + values_b
-    max_val = max(all_values) if all_values else 1
+    results = {}
     
+    for cluster_id in range(1, 9):
+        vars_in_cluster = cluster_df[cluster_df['cluster'] == cluster_id]['variable'].tolist()
+        valid_vars = [v for v in vars_in_cluster if v in position_data.columns]
+        
+        if not valid_vars:
+            results[cluster_id] = {'name': cluster_names.get(cluster_id, str(cluster_id)), 'score': 0.0}
+            continue
+            
+        X = position_data[valid_vars].fillna(0)
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        
+        scores = None
+        if X.shape[1] == 1:
+            scores = X_scaled
+        else:
+            try:
+                fa = FactorAnalyzer(n_factors=1, rotation=None)
+                fa.fit(X_scaled)
+                scores = fa.transform(X_scaled)
+            except:
+                try:
+                    pca = PCA(n_components=1)
+                    scores = pca.fit_transform(X_scaled)
+                except:
+                    scores = X_scaled.mean(axis=1).reshape(-1, 1)
+
+        if pd.Series(scores.flatten()).corr(X.sum(axis=1).reset_index(drop=True)) < 0:
+            scores = -scores
+            
+        player_score = scores[player_row.index].mean()
+        percentile = 50 + (player_score - scores.mean()) / scores.std() * 10
+        
+        # Invert for negative indicators (5: Deaths, 8: Enemy Combat Advantage)
+        # So that Higher Score = Better Performance (Low Deaths, Low Enemy Advantage)
+        if cluster_id in [5, 8]:
+            percentile = 100 - percentile
+        
+        results[cluster_id] = {
+            'name': cluster_names.get(cluster_id, str(cluster_id)),
+            'score': percentile
+        }
+        
+    return results
+
+
+def _create_style_radar_chart(scores_a: Dict, scores_b: Dict, name_a: str, name_b: str) -> go.Figure:
+    """Create overlaid radar chart for style analysis."""
+    categories = []
+    vals_a = []
+    vals_b = []
+    
+    # Ensure order 1-8
+    for i in range(1, 9):
+        if i in scores_a:
+            categories.append(scores_a[i]['name'])
+            vals_a.append(scores_a[i]['score'])
+            vals_b.append(scores_b.get(i, {'score': 0})['score'])
+            
     fig = go.Figure()
     
-    # Add trace for Player A
-    fig.add_trace(
-        go.Scatterpolar(
-            r=values_a,
-            theta=categories,
-            fill="toself",
-            name=player_a_name,
-            line=dict(color=CHART_COLORS["player_a"], width=2),
-            marker=dict(color=CHART_COLORS["player_a"]),
-            hovertemplate=f"%{{theta}}: %{{r:.2f}} ({player_a_name})<extra></extra>",
-        )
-    )
+    fig.add_trace(go.Scatterpolar(
+        r=vals_a, theta=categories, fill='toself', name=name_a,
+        line=dict(color=CHART_COLORS['player_a']),
+        marker=dict(color=CHART_COLORS['player_a'])
+    ))
     
-    # Add trace for Player B
-    fig.add_trace(
-        go.Scatterpolar(
-            r=values_b,
-            theta=categories,
-            fill="toself",
-            name=player_b_name,
-            line=dict(color=CHART_COLORS["player_b"], width=2),
-            marker=dict(color=CHART_COLORS["player_b"]),
-            hovertemplate=f"%{{theta}}: %{{r:.2f}} ({player_b_name})<extra></extra>",
-        )
-    )
+    fig.add_trace(go.Scatterpolar(
+        r=vals_b, theta=categories, fill='toself', name=name_b,
+        line=dict(color=CHART_COLORS['player_b']),
+        marker=dict(color=CHART_COLORS['player_b'])
+    ))
     
+    # Calculate dynamic range to highlight differences
+    all_vals = vals_a + vals_b
+    if all_vals:
+        min_val = min(all_vals)
+        max_val = max(all_vals)
+        # Zoom in: range from (min - 10) to (max + 10), clamped to 0-100
+        range_min = max(0, min_val - 10)
+        range_max = min(100, max_val + 10)
+    else:
+        range_min, range_max = 0, 100
+
     fig.update_layout(
-        title=title,
+        polar=dict(radialaxis=dict(visible=True, range=[range_min, range_max])),
         showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.1, xanchor="center", x=0.5),
-        polar=dict(
-            radialaxis=dict(
-                visible=True,
-                range=[0, max_val * 1.1 if max_val > 0 else 1],
-                tickfont=dict(size=11),
-                gridcolor=CHART_COLORS["grid"],
-            ),
-            angularaxis=dict(tickfont=dict(size=11)),
-        ),
-        margin=dict(l=20, r=20, t=60, b=40),
+        title="플레이어 스타일 비교 (8 Factors)"
     )
-    
     return fig
 
 
-def _create_diverging_bar_chart(
-    stats_a: Dict[str, float],
-    stats_b: Dict[str, float],
-    player_a_name: str,
-    player_b_name: str,
-    title: str = "통계 차이 비교"
-) -> go.Figure:
-    """Create a diverging bar chart showing the difference between two players."""
-    # Get all unique categories
-    categories = list(set(list(stats_a.keys()) + list(stats_b.keys())))
+def _create_diff_chart(scores_a: Dict, scores_b: Dict, name_a: str, name_b: str) -> go.Figure:
+    """Create bar chart showing score differences."""
+    categories = []
+    diffs = []
     
-    # Calculate differences (Player A - Player B)
-    differences = {cat: stats_a.get(cat, 0.0) - stats_b.get(cat, 0.0) for cat in categories}
+    for i in range(1, 9):
+        if i in scores_a:
+            cat = scores_a[i]['name']
+            diff = scores_a[i]['score'] - scores_b.get(i, {'score': 0})['score']
+            categories.append(cat)
+            diffs.append(diff)
+            
+    # Sort by diff
+    sorted_indices = sorted(range(len(diffs)), key=lambda k: diffs[k])
+    categories = [categories[i] for i in sorted_indices]
+    diffs = [diffs[i] for i in sorted_indices]
     
-    # Sort by absolute difference for better visualization
-    sorted_cats = sorted(categories, key=lambda x: abs(differences[x]), reverse=True)
-    diffs = [differences[cat] for cat in sorted_cats]
+    colors = [CHART_COLORS['player_a'] if d > 0 else CHART_COLORS['player_b'] for d in diffs]
     
-    # Determine colors based on sign
-    colors = [
-        CHART_COLORS["positive"] if diff > 0 
-        else CHART_COLORS["negative"] if diff < 0 
-        else CHART_COLORS["neutral"] 
-        for diff in diffs
-    ]
-    
-    fig = go.Figure()
-    
-    fig.add_trace(
-        go.Bar(
-            x=diffs,
-            y=sorted_cats,
-            orientation="h",
-            marker=dict(color=colors),
-            hovertemplate="%{y}: %{x:+.2f}<br>" + 
-                         f"{player_a_name}: %{{customdata[0]:.2f}}<br>" +
-                         f"{player_b_name}: %{{customdata[1]:.2f}}<extra></extra>",
-            customdata=[[stats_a.get(cat, 0.0), stats_b.get(cat, 0.0)] for cat in sorted_cats],
-        )
-    )
+    fig = go.Figure(go.Bar(
+        y=categories, x=diffs, orientation='h',
+        marker=dict(color=colors),
+        text=[f"{abs(d):.1f}" for d in diffs],
+        textposition='auto'
+    ))
     
     fig.update_layout(
-        title=title,
-        xaxis_title=f"차이 ({player_a_name} - {player_b_name})",
-        yaxis_title="메트릭",
-        yaxis={"categoryorder": "total ascending"},
-            shapes=[
-            dict(
-                type="line",
-                xref="x",
-                yref="paper",
-                x0=0,
-                y0=0,
-                x1=0,
-                y1=1,
-                line=dict(color=CHART_COLORS["divider"], width=2, dash="dash"),
-            )
-        ],
-        annotations=[
-            dict(
-                x=0,
-                y=1.02,
-                xref="x",
-                yref="paper",
-                text=f"{player_a_name} 유리",
-                showarrow=False,
-                font=dict(color=CHART_COLORS["positive"], size=10),
-                xanchor="right",
-            ),
-            dict(
-                x=0,
-                y=1.02,
-                xref="x",
-                yref="paper",
-                text=f"{player_b_name} 유리",
-                showarrow=False,
-                font=dict(color=CHART_COLORS["negative"], size=10),
-                xanchor="left",
-            ),
-        ],
-        hovermode="closest",
+        title=f"스타일 차이 ({name_a} - {name_b})",
+        xaxis_title="Score Difference",
+        yaxis_title=None
     )
-    
     return fig
 
 
-def render_page() -> pd.DataFrame:
+def _get_most_champs(df: pd.DataFrame) -> pd.DataFrame:
+    """Get top 5 champions stats."""
+    if df.empty:
+        return pd.DataFrame()
+        
+    stats = df.groupby("champion").agg(
+        gameplay=("champion", "count"),
+        win_rate=("result", lambda x: pd.to_numeric(x, errors="coerce").mean() * 100),
+        kda=("KDA", "mean"),
+        gd10=("golddiffat10", "mean"),
+        gd15=("golddiffat15", "mean"),
+        gd20=("golddiffat20", "mean"),
+        gd25=("golddiffat25", "mean"),
+        cpm=("cspm", "mean"),
+        dpm=("dpm", "mean"),
+        vs=("visionscore", "mean"),
+    ).reset_index()
+    
+    return stats.sort_values("gameplay", ascending=False).head(5)
+
+
+def _get_head_to_head_stats(df_all: pd.DataFrame, player_a: str, player_b: str) -> pd.DataFrame:
+    """Find games where players faced each other."""
+    # Get all games for both players
+    games_a = df_all[df_all['playername'] == player_a]
+    games_b = df_all[df_all['playername'] == player_b]
+    
+    # Merge on gameid
+    merged = pd.merge(games_a, games_b, on='gameid', suffixes=('_a', '_b'))
+    
+    # Filter for opposing teams
+    opponents = merged[merged['teamname_a'] != merged['teamname_b']].copy()
+    
+    return opponents
+
+
+def render_page():
     st.header("Player vs. Player Comparison")
-    st.caption("같은 포지션의 플레이어만 비교할 수 있습니다.")
     
     filtered_df = _load_filtered_players()
-    
     if filtered_df.empty:
-        st.warning("필터링된 데이터가 없습니다. 필터를 조정해 주세요.")
-        return filtered_df
+        st.warning("데이터가 없습니다.")
+        return
+
+    player_id_col = 'playername'
+    unique_players = sorted(filtered_df[player_id_col].dropna().unique().tolist(), key=str)
     
-    # Get player ID column
-    player_id_col = _get_player_id_column(filtered_df)
-    if player_id_col is None:
-        st.error("플레이어 ID 컬럼을 찾을 수 없습니다.")
-        return filtered_df
-    
-    # Check for position column
-    position_col = None
-    for col in filtered_df.columns:
-        if col.lower() == "position":
-            position_col = col
-            break
-    
-    if position_col is None:
-        st.error("포지션 컬럼을 찾을 수 없습니다.")
-        return filtered_df
-    
-    # Get unique players
-    unique_players = filtered_df[player_id_col].dropna().unique().tolist()
-    if not unique_players:
-        st.warning("선택할 플레이어가 없습니다.")
-        return filtered_df
-    
-    # Sort players for better UX
-    unique_players = sorted(unique_players, key=str)
-    
-    # Create two-column layout
+    # Layout: Player Selection
     col1, col2 = st.columns(2)
     
-    # Player A selector
     with col1:
         st.subheader("Player A")
-        player_a = st.selectbox(
-            "플레이어 A 선택",
-            options=unique_players,
-            key="player_comparison_a"
-        )
-    
-    # Player B selector (dependent on Player A's position)
+        st.caption("&nbsp;") # Empty caption for alignment
+        player_a = st.selectbox("Select Player A", unique_players, key="p_a")
+        
     with col2:
         st.subheader("Player B")
-        
-        if not player_a:
-            st.info("먼저 Player A를 선택해 주세요.")
-            player_b = None
+        if player_a:
+            # Get Position of A
+            pos_a = filtered_df[filtered_df[player_id_col] == player_a]['position'].iloc[0]
+            st.caption(f"Player A Position: **{pos_a}**")
+            
+            # Filter B candidates (same position)
+            candidates = filtered_df[
+                (filtered_df['position'] == pos_a) & 
+                (filtered_df[player_id_col] != player_a)
+            ][player_id_col].unique().tolist()
+            
+            player_b = st.selectbox("Select Player B", sorted(candidates, key=str), key="p_b")
         else:
-            # Get Player A's position
-            player_a_data = filtered_df[filtered_df[player_id_col] == player_a]
-            if player_a_data.empty:
-                st.warning(f"{player_a} 플레이어의 데이터를 찾을 수 없습니다.")
-                player_b = None
-            else:
-                pos_a = player_a_data[position_col].iloc[0] if not player_a_data[position_col].empty else None
-                
-                if pos_a is None or pd.isna(pos_a):
-                    st.warning(f"{player_a} 플레이어의 포지션을 찾을 수 없습니다.")
-                    player_b = None
-                else:
-                    # Display Player A's position
-                    st.caption(f"Player A 포지션: **{pos_a}**")
-                    
-                    # Filter players with the same position (excluding Player A)
-                    eligible_players = filtered_df[
-                        (filtered_df[position_col] == pos_a) & 
-                        (filtered_df[player_id_col] != player_a)
-                    ][player_id_col].dropna().unique().tolist()
-                    
-                    if not eligible_players:
-                        st.warning(f"{pos_a} 포지션의 다른 플레이어가 없습니다.")
-                        player_b = None
-                    else:
-                        eligible_players = sorted(eligible_players, key=str)
-                        player_b = st.selectbox(
-                            "플레이어 B 선택 (같은 포지션만 표시됨)",
-                            options=eligible_players,
-                            key="player_comparison_b"
-                        )
-    
-    # Display comparison if both players are selected
+            player_b = None
+
     if player_a and player_b:
         st.divider()
         
-        # Get data for both players
-        player_a_data = filtered_df[filtered_df[player_id_col] == player_a].copy()
-        player_b_data = filtered_df[filtered_df[player_id_col] == player_b].copy()
+        # Data
+        df_a = filtered_df[filtered_df[player_id_col] == player_a]
+        df_b = filtered_df[filtered_df[player_id_col] == player_b]
         
-        if player_a_data.empty or player_b_data.empty:
-            st.warning("플레이어 데이터를 불러올 수 없습니다.")
-            return filtered_df
+        # 1. Player Style Analysis
+        st.subheader("Player Style Analysis")
+        scores_a = _calculate_factor_scores(player_a, pos_a, filtered_df)
+        scores_b = _calculate_factor_scores(player_b, pos_a, filtered_df)
         
-        # Calculate metrics for both players
-        stats_a = _get_player_metrics(player_a_data)
-        stats_b = _get_player_metrics(player_b_data)
-        
-        # Display basic info in a container
-        with st.container():
-            info_col1, info_col2 = st.columns(2)
+        if scores_a and scores_b:
+            sc1, sc2 = st.columns(2)
+            with sc1:
+                radar = _create_style_radar_chart(scores_a, scores_b, player_a, player_b)
+                st.plotly_chart(radar, use_container_width=True)
+            with sc2:
+                diff_chart = _create_diff_chart(scores_a, scores_b, player_a, player_b)
+                st.plotly_chart(diff_chart, use_container_width=True)
+        else:
+            st.info("스타일 분석을 위한 데이터가 부족합니다.")
             
-            with info_col1:
-                st.metric("Player A 경기 수", len(player_a_data))
-                if "result" in player_a_data.columns:
-                    wins_a = pd.to_numeric(player_a_data["result"], errors="coerce").sum()
-                    win_rate_a = (wins_a / len(player_a_data) * 100) if len(player_a_data) > 0 else 0
-                    st.metric("Player A 승률", f"{win_rate_a:.1f}%")
-            
-            with info_col2:
-                st.metric("Player B 경기 수", len(player_b_data))
-                if "result" in player_b_data.columns:
-                    wins_b = pd.to_numeric(player_b_data["result"], errors="coerce").sum()
-                    win_rate_b = (wins_b / len(player_b_data) * 100) if len(player_b_data) > 0 else 0
-                    st.metric("Player B 승률", f"{win_rate_b:.1f}%")
-        
         st.divider()
         
-        # Create comparison charts in a container
-        with st.container():
-            chart_col1, chart_col2 = st.columns(2)
-            
-            with chart_col1:
-                st.subheader("레이더 차트 비교")
-                radar_fig = _create_overlaid_radar_chart(
-                    stats_a,
-                    stats_b,
-                    player_a,
-                    player_b,
-                    title=f"{player_a} vs {player_b}"
-                )
-                st.plotly_chart(radar_fig, use_container_width=True)
-            
-            with chart_col2:
-                st.subheader("통계 차이 비교")
-                diverging_fig = _create_diverging_bar_chart(
-                    stats_a,
-                    stats_b,
-                    player_a,
-                    player_b,
-                    title=f"{player_a} vs {player_b}"
-                )
-                st.plotly_chart(diverging_fig, use_container_width=True)
+        # 3. Most 5 Champions
+        st.subheader("Most 5 Champions")
         
-        # Debug section in expander
-        with st.expander("🔧 디버그 정보", expanded=False):
-            if st.checkbox("플레이어 통계 표시", value=False):
-                debug_col1, debug_col2 = st.columns(2)
-                with debug_col1:
-                    st.write(f"**{player_a} 통계:**")
-                    st.json(stats_a)
-                with debug_col2:
-                    st.write(f"**{player_b} 통계:**")
-                    st.json(stats_b)
-    
-    return filtered_df
+        mc1, mc2 = st.columns(2)
+        
+        most_a = _get_most_champs(df_a)
+        most_b = _get_most_champs(df_b)
+        
+        col_config = {
+            "win_rate": st.column_config.NumberColumn("Win%", format="%.1f%%"),
+            "kda": st.column_config.NumberColumn("KDA", format="%.2f"),
+            "gd10": st.column_config.NumberColumn("GD@10", format="%.0f"),
+            "gd15": st.column_config.NumberColumn("GD@15", format="%.0f"),
+            "dpm": st.column_config.NumberColumn("DPM", format="%.0f"),
+        }
+        
+        with mc1:
+            st.caption(f"**{player_a}**")
+            st.dataframe(most_a, hide_index=True, column_config=col_config, width="stretch")
+            
+        with mc2:
+            st.caption(f"**{player_b}**")
+            st.dataframe(most_b, hide_index=True, column_config=col_config, width="stretch")
+            
+        st.divider()
+        
+        # 4. Head-to-Head
+        st.subheader("상대 전적 (Head-to-Head)")
+        
+        h2h_games = _get_head_to_head_stats(filtered_df, player_a, player_b)
+        
+        if not h2h_games.empty:
+            # Stats Diff in H2H
+            st.caption(f"총 {len(h2h_games)}경기 맞대결")
+            
+            # Calculate A's Win Rate vs B
+            wins_vs = h2h_games['result_a'].sum()
+            wr_vs = (wins_vs / len(h2h_games)) * 100
+            st.metric(f"{player_a} 승률 vs {player_b}", f"{wr_vs:.1f}% ({wins_vs}승 {len(h2h_games)-wins_vs}패)")
+            
+            # Game Log
+            st.write("맞대결 기록")
+            display_cols = ['date_a', 'result_a', 'champion_a', 'champion_b', 'KDA_a', 'KDA_b']
+            
+            # Rename for display
+            log_df = h2h_games[display_cols].rename(columns={
+                'date_a': 'Date',
+                'result_a': 'Result (A)',
+                'champion_a': f'{player_a} Champ',
+                'champion_b': f'{player_b} Champ',
+                'KDA_a': f'{player_a} KDA',
+                'KDA_b': f'{player_b} KDA'
+            })
+            
+            st.dataframe(log_df, hide_index=True, width="stretch")
+            
+        else:
+            st.info("맞대결 기록이 없습니다.")
 
-
-filtered_players_df = render_page()
+render_page()
 
