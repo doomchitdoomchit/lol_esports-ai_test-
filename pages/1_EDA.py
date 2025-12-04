@@ -21,9 +21,6 @@ def _get_active_filters(df_players) -> Dict[str, Any]:
     return render_sidebar_filters(df_players)
 
 
-
-
-
 def _process_champion_stats(df: pd.DataFrame) -> pd.DataFrame:
     """Calculate champion picks, bans, wins, and losses."""
     if df.empty:

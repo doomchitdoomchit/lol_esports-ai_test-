@@ -17,12 +17,6 @@ from components.utils import apply_filters
 st.set_page_config(layout="wide")
 
 
-
-
-
-
-
-
 def _load_filtered_teams() -> pd.DataFrame:
     _, df_teams = load_data()
     filters = render_sidebar_filters(df_teams)

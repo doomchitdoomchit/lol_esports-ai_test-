@@ -15,12 +15,6 @@ from components.utils import apply_filters
 st.set_page_config(layout="wide")
 
 
-
-
-
-
-
-
 def _load_filtered_players() -> pd.DataFrame:
     df_players, _ = load_data()
     filters = render_sidebar_filters(df_players)
