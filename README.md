@@ -1,6 +1,6 @@
 # lol Esports(gemini)
 
-LCK(League of Legends Champions Korea) e스포츠 데이터 분석 대시보드 프로젝트입니다. Streamlit을 활용하여 선수 및 팀의 성과 지표, 스타일 분석, 챔피언 통계 등을 시각화하여 제공합니다.
+해당 프로젝트는 Player_Profile의 일부분을 제외한 gemini의 프롬프트를 사용하여 제작된 lol Esports 데이터 분석 대시보드 프로젝트입니다. Streamlit을 활용하여 선수 및 팀의 성과 지표, 스타일 분석, 챔피언 통계 등을 시각화하여 제공합니다.
 
 ## 주요 기능 (Features)
 
